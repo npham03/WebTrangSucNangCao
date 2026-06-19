@@ -1,0 +1,454 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using WebTrangSucNangCao.Models;
+using System.Diagnostics;
+
+namespace WebTrangSucNangCao.Controllers
+{
+    [Authorize(Roles = "Admin")]
+    public class AdminController : Controller
+    {
+        // 1. Khai báo các dịch vụ (Dependency Injection)
+        private readonly ShopOnlineContext _database;
+        private readonly IWebHostEnvironment _env;
+
+        public AdminController(
+            ShopOnlineContext database,
+            IWebHostEnvironment env)
+        {
+            _database = database;
+            _env = env;
+        }
+
+        // HÀM 1: (GET) Mở trang Dashboard (Index)
+        public ActionResult Index()
+        {
+            var viewModel = new AdminDashboardViewModel();
+
+            // Lưu ý: EF Core thường đổi "Category1" thành "CategoryNavigation" hoặc "IdcateNavigation"
+            viewModel.Products = _database.Products.Include(p => p.CategoryNavigation).ToList();
+            viewModel.Sliders = _database.Sliders.ToList();
+            viewModel.NewSlider = new Slider();
+
+            // A. TÍNH DOANH SỐ 
+            var revenueDouble = _database.OrderDetails
+                .Where(d => d.IdorderNavigation.Status == "Hoàn tất")
+                .Sum(d => (double?)d.Quantity * d.UnitPrice) ?? 0;
+
+            viewModel.TotalRevenue = (decimal)revenueDouble;
+
+            // B. ĐẾM ĐƠN HÀNG CHƯA XỬ LÝ
+            viewModel.PendingOrdersCount = _database.OrderPros
+                .Count(o => o.Status == "Đang xử lý");
+
+            // C. TỔNG SỐ SẢN PHẨM ĐÃ BÁN (Chỉ tính đơn "Hoàn tất")
+            var soldCount = _database.OrderDetails
+                .Where(d => d.IdorderNavigation.Status == "Hoàn tất")
+                .Sum(d => d.Quantity) ?? 0;
+            viewModel.TotalProductsSold = soldCount;
+
+            // D. LẤY SẢN PHẨM SẮP HẾT HÀNG (Tồn kho <= 5)
+            viewModel.LowStockVariants = _database.ProductVariants
+                .Include(v => v.Product)
+                .Where(v => v.Stock <= 5)
+                .OrderBy(v => v.Stock)
+                .Take(10)
+                .ToList();
+
+            return View(viewModel);
+        }
+
+        // (POST) Xử lý form "Thêm Slider"
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddSlider(AdminDashboardViewModel viewModel, IFormFile ImageFile)
+        {
+            var newSlider = viewModel.NewSlider;
+
+            // Xử lý ảnh với IFormFile và IWebHostEnvironment
+            if (ImageFile != null && ImageFile.Length > 0)
+            {
+                var fileName = Path.GetFileName(ImageFile.FileName);
+                var path = Path.Combine(_env.WebRootPath, "Content", "Img", "Banners", fileName);
+
+                using (var stream = new FileStream(path, FileMode.Create))
+                {
+                    await ImageFile.CopyToAsync(stream);
+                }
+
+                newSlider.ImagePath = "~/imagesBanners/" + fileName;
+
+                _database.Sliders.Add(newSlider);
+                await _database.SaveChangesAsync();
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        // (POST) Xử lý nút "Xóa Slider"
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult DeleteSlider(int id)
+        {
+            Slider slider = _database.Sliders.Find(id);
+            if (slider != null)
+            {
+                _database.Sliders.Remove(slider);
+                _database.SaveChanges();
+            }
+            return RedirectToAction("Index");
+        }
+
+        // GET: MỞ TRANG DANH SÁCH SẢN PHẨM
+        public ActionResult ProductList()
+        {
+            // Sửa Category1 thành CategoryNavigation
+            var products = _database.Products.Include(p => p.CategoryNavigation).OrderByDescending(p => p.ProductId).ToList();
+            return View(products);
+        }
+
+        // HÀM 1: (GET) Mở trang AddProduct
+        public ActionResult AddProduct()
+        {
+            var categories = _database.Categories.ToList();
+            ViewBag.CategoryList = new SelectList(categories, "IDCate", "NameCate");
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddProduct(Product p, IEnumerable<IFormFile> ImageFiles, int? InitialStock)
+        {
+            ViewBag.CategoryList = new SelectList(_database.Categories.ToList(), "IDCate", "NameCate");
+
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    if (ImageFiles == null || !ImageFiles.Any() || ImageFiles.First() == null)
+                    {
+                        ModelState.AddModelError("", "Vui lòng thêm ít nhất 1 ảnh");
+                        return View(p);
+                    }
+
+                    // LẤY ẢNH BÌA
+                    var firstFile = ImageFiles.First();
+                    var firstFileName = Path.GetFileName(firstFile.FileName);
+                    var firstFilePath = Path.Combine(_env.WebRootPath, "Content", "Img", "Products", firstFileName);
+
+                    using (var stream = new FileStream(firstFilePath, FileMode.Create))
+                    {
+                        await firstFile.CopyToAsync(stream);
+                    }
+
+                    p.ImagePro = "~/imagesProducts/" + firstFileName;
+
+                    _database.Products.Add(p);
+                    await _database.SaveChangesAsync();
+
+                    // TỰ TẠO SIZE MẶC ĐỊNH
+                    if (InitialStock.HasValue && InitialStock.Value > 0)
+                    {
+                        ProductVariant defaultVariant = new ProductVariant
+                        {
+                            ProductId = p.ProductId,
+                            VariantName = "FreeSize",
+                            Stock = InitialStock.Value
+                        };
+                        _database.ProductVariants.Add(defaultVariant);
+                    }
+
+                    // LƯU ẢNH GALLERY
+                    foreach (var file in ImageFiles)
+                    {
+                        if (file != null && file.Length > 0)
+                        {
+                            var fileName = Path.GetFileName(file.FileName);
+                            var path = Path.Combine(_env.WebRootPath, "Content", "Img", "Products", fileName);
+
+                            using (var stream = new FileStream(path, FileMode.Create))
+                            {
+                                await file.CopyToAsync(stream);
+                            }
+
+                            var imagePathDb = "~/imagesProducts/" + fileName;
+
+                            ProductImage galleryImage = new ProductImage
+                            {
+                                ProductId = p.ProductId,
+                                ImagePath = imagePathDb
+                            };
+                            _database.ProductImages.Add(galleryImage);
+                        }
+                    }
+
+                    await _database.SaveChangesAsync();
+                    return RedirectToAction("Edit", new { id = p.ProductId });
+                }
+
+                return View(p);
+            }
+            catch (DbUpdateException ex)
+            {
+                ModelState.AddModelError("", "Đã xảy ra lỗi khi lưu vào cơ sở dữ liệu: " + ex.Message);
+                return View(p);
+            }
+        }
+
+        // XÓA SẢN PHẨM (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(int id)
+        {
+            Product product = _database.Products.Find(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            var orderDetails = _database.OrderDetails.Where(o => o.Idproduct == id);
+            if (orderDetails.Any())
+            {
+                _database.OrderDetails.RemoveRange(orderDetails);
+            }
+
+            var variants = _database.ProductVariants.Where(v => v.ProductId == id);
+            if (variants.Any())
+            {
+                _database.ProductVariants.RemoveRange(variants);
+            }
+
+            var images = _database.ProductImages.Where(i => i.ProductId == id);
+            if (images.Any())
+            {
+                _database.ProductImages.RemoveRange(images);
+            }
+
+            var userCarts = _database.UserCarts.Where(c => c.Variant.ProductId == id);
+            if (userCarts.Any())
+            {
+                _database.UserCarts.RemoveRange(userCarts);
+            }
+
+            _database.Products.Remove(product);
+            _database.SaveChanges();
+
+            return RedirectToAction("ProductList");
+        }
+
+        // SỬA SẢN PHẨM (GET)
+        public ActionResult Edit(int? id)
+        {
+            if (id == null)
+            {
+                return BadRequest();
+            }
+
+            Product product = _database.Products.Find(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            var categories = _database.Categories.ToList();
+            var images = _database.ProductImages.Where(img => img.ProductId == id).ToList();
+            var variants = _database.ProductVariants.Where(v => v.ProductId == id).ToList();
+
+            var viewModel = new ProductEditViewModel
+            {
+                Product = product,
+                Images = images,
+                Variants = variants,
+                // Chú ý: Cột lưu trữ ID category cũ của bạn tên là Category
+                CategoryList = new SelectList(categories, "IDCate", "NameCate", product.Category)
+            };
+
+            return View(viewModel);
+        }
+
+        // (POST) Xử lý khi nhấn "Lưu Thay Đổi"
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(ProductEditViewModel viewModel)
+        {
+            var productFromForm = viewModel.Product;
+
+            if (ModelState.IsValid)
+            {
+                var productInDb = _database.Products.Find(productFromForm.ProductId);
+                if (productInDb == null)
+                {
+                    return NotFound();
+                }
+
+                productInDb.NamePro = productFromForm.NamePro;
+                productInDb.DecriptionPro = productFromForm.DecriptionPro;
+                productInDb.Material = productFromForm.Material;
+                productInDb.Price = productFromForm.Price;
+                productInDb.Category = productFromForm.Category;
+
+                _database.SaveChanges();
+                return RedirectToAction("ProductList");
+            }
+
+            viewModel.Images = _database.ProductImages.Where(img => img.ProductId == productFromForm.ProductId).ToList();
+            viewModel.Variants = _database.ProductVariants.Where(v => v.ProductId == productFromForm.ProductId).ToList();
+            viewModel.CategoryList = new SelectList(_database.Categories.ToList(), "IDCate", "NameCate", productFromForm.Category);
+
+            return View(viewModel);
+        }
+
+        // XEM ĐƠN HÀNG (GET)
+        public ActionResult Orders(string statusFilter)
+        {
+            IQueryable<OrderPro> ordersQuery = _database.OrderPros.Include(o => o.IdcusNavigation);
+
+            if (statusFilter == "Hoàn tất")
+            {
+                ViewBag.CurrentFilter = "Hoàn tất";
+                ordersQuery = ordersQuery.Where(o => o.Status == "Hoàn tất");
+            }
+            else if (statusFilter == "Đang xử lý" || statusFilter == "Đang giao")
+            {
+                ViewBag.CurrentFilter = statusFilter;
+                ordersQuery = ordersQuery.Where(o => o.Status == statusFilter);
+            }
+            else
+            {
+                ViewBag.CurrentFilter = "Tất cả";
+                ordersQuery = ordersQuery.Where(o => o.Status != "Hoàn tất");
+            }
+
+            var orders = ordersQuery.OrderByDescending(o => o.DateOrder).ToList();
+            return View(orders);
+        }
+
+        // SỬA ĐƠN HÀNG (GET)
+        public ActionResult EditOrder(int? id)
+        {
+            if (id == null)
+            {
+                return BadRequest();
+            }
+            OrderPro order = _database.OrderPros.Find(id);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            List<string> statusList = new List<string> { "Đang xử lý", "Đang giao", "Hoàn tất" };
+            ViewBag.StatusList = new SelectList(statusList, order.Status);
+
+            return View(order);
+        }
+
+        // SỬA ĐƠN HÀNG (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditOrder(int id, string Status)
+        {
+            var dbOrder = _database.OrderPros.Find(id);
+            if (dbOrder == null)
+            {
+                return NotFound();
+            }
+
+            dbOrder.Status = Status;
+            _database.SaveChanges();
+
+            return RedirectToAction("Orders");
+        }
+
+        // LẤY USER (GET)
+        public ActionResult Users()
+        {
+            var users = _database.Users.ToList();
+            return View(users);
+        }
+
+        // LẤY CHI TIẾT ĐƠN HÀNG(GET)
+        public ActionResult OrderDetails(int? id)
+        {
+            if (id == null)
+            {
+                return BadRequest();
+            }
+
+            OrderPro order = _database.OrderPros
+                .Include(o => o.IdcusNavigation)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(detail => detail.IdproductNavigation)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(detail => detail.Variant)
+                .FirstOrDefault(o => o.Id == id); // Đã sửa ID thành Id
+
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            return View(order);
+        }
+
+        // THÊM SIZE (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AddVariant(int ProductId, string VariantName, int Stock)
+        {
+            ProductVariant newVariant = new ProductVariant
+            {
+                ProductId = ProductId,
+                VariantName = VariantName,
+                Stock = Stock
+            };
+
+            _database.ProductVariants.Add(newVariant);
+            _database.SaveChanges();
+
+            return RedirectToAction("Edit", new { id = ProductId });
+        }
+
+        // XÓA SIZE (POST)
+        [HttpPost]
+        public ActionResult DeleteVariant(int VariantId)
+        {
+            var variant = _database.ProductVariants.Find(VariantId);
+            if (variant != null)
+            {
+                int ProductId = variant.ProductId.Value;
+
+                _database.ProductVariants.Remove(variant);
+                _database.SaveChanges();
+
+                return RedirectToAction("Edit", new { id = ProductId });
+            }
+            return RedirectToAction("Index");
+        }
+
+        // HÀM 9: (POST) Xóa 1 Ảnh (Image)
+        [HttpPost]
+        public ActionResult DeleteImage(int ImageId)
+        {
+            var image = _database.ProductImages.Find(ImageId);
+            if (image != null)
+            {
+                int ProductId = image.ProductId.Value;
+
+                _database.ProductImages.Remove(image);
+                _database.SaveChanges();
+
+                return RedirectToAction("Edit", new { id = ProductId });
+            }
+            return RedirectToAction("Index");
+        }
+    }
+}

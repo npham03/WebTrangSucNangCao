@@ -1,0 +1,48 @@
+﻿@model WebTrangSucNangCao.Models.VerifyCodeViewModel
+@{
+    ViewData["Title"] = "Verify";
+}
+
+<main aria-labelledby="title">
+    <h2 id="title">@ViewData["Title"].</h2>
+
+    <form asp-controller="Account" asp-action="VerifyCode" asp-route-returnurl="@Model.ReturnUrl" method="post" role="form">
+
+        <input type="hidden" asp-for="Provider" />
+        <input type="hidden" asp-for="RememberMe" />
+
+        <h4>Enter verification code</h4>
+        <hr />
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="row mb-3">
+            <label asp-for="Code" class="col-md-2 col-form-label"></label>
+            <div class="col-md-10">
+                <input asp-for="Code" class="form-control" />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="offset-md-2 col-md-10">
+                <div class="checkbox">
+                    <label asp-for="RememberBrowser">
+                        <input asp-for="RememberBrowser" />
+                        @Html.DisplayNameFor(m => m.RememberBrowser)
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="offset-md-2 col-md-10">
+                <button type="submit" class="btn btn-outline-dark">Submit</button>
+            </div>
+        </div>
+    </form>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

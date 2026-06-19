@@ -1,0 +1,36 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <div class="user-menu-container">
+        <span class="user-icon-nav">
+            <img src="~/imgages/imagesdangnhap.png" class="icon" />
+        </span>
+        <div class="user-dropdown">
+            <div class="username-display">
+                Heloo, <strong>@User.Identity.Name</strong>
+            </div>
+            <hr style="margin: 8px 0;">
+
+            <form asp-controller="Account" asp-action="LogOff" method="post" id="logoutForm" class="m-0 p-0">
+                <a href="javascript:document.getElementById('logoutForm').submit()" class="logout-link">Logout</a>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="user-menu-container">
+        <span class="user-icon-nav">
+            <img src="~/imgages/dangnhap.png" class="icon" />
+        </span>
+        <div class="user-dropdown">
+            <a asp-controller="Account" asp-action="Login" class="login-register-link">Đăng nhập</a>
+
+            <hr style="margin: 8px 0;">
+
+            <a asp-controller="Account" asp-action="Register" class="login-register-link">Đăng ký</a>
+        </div>
+    </div>
+}

@@ -1,0 +1,37 @@
+﻿/* Dùng cho vạch kẻ giữa 2 cột */
+.vertical-line {
+    border-right: 1px solid #eee;
+}
+
+/* Định dạng cho input với label nằm trên input */
+.custom-input-group {
+    margin-bottom: 20px;
+}
+
+.custom-input-group .form-control {
+    /* Viền đen cho input */
+    border-radius: 0;
+    border: 1px solid #000;
+}
+
+.custom-input-group .form-label {
+    /* Định dạng cho Tên, Họ, Email... */
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+/* Nút bấm (Đăng nhập, Đăng ký) */
+.btn-outline-dark.w-100 {
+    border-radius: 0;
+    border: 2px solid #000;
+    font-weight: 600;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.btn-outline-dark.w-100:hover {
+    background-color: #000;
+    color: #fff;
+}

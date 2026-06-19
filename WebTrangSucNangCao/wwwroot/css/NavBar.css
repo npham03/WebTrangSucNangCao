@@ -1,0 +1,670 @@
+﻿/* PHẦN 0: RESET CƠ BẢN */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* PHẦN 1: THANH NAVBAR CHUNG */
+.navbar {
+    background-color: #f2f2f2; /* màu xám nền */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex-shrink: 0; /* Quan trọng cho sticky footer */
+}
+
+/* PHẦN 1.1: LOGO + TÊN THƯƠNG HIỆU */
+.brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #000;
+}
+
+.logo {
+    height: 60px;
+    margin-right: 10px;
+}
+
+.icon {
+    height: 35px;
+}
+
+.brand-name {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* PHẦN 1.2: CÁC LINK ĐIỀU HƯỚNG Ở GIỮA */
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 40px;
+    height: 60px;
+    position: relative;
+    top: 25px;
+}
+
+    .nav-links a {
+        text-decoration: none;
+        color: #000;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+
+        .nav-links a:hover {
+            color: #555;
+        }
+
+/* PHẦN 1.3: KHU VỰC BÊN PHẢI (TÌM KIẾM, ICON, NGÔN NGỮ) */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* THANH TÌM KIẾM */
+.search-box {
+    position: relative;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+}
+
+    .search-box input {
+        border: none;
+        outline: none;
+        background: none;
+        padding: 5px;
+        font-size: 14px;
+    }
+
+    .search-box i {
+        color: #333;
+        cursor: pointer;
+    }
+
+/* ICON NGƯỜI DÙNG & GIỎ HÀNG */
+.nav-right i {
+    font-size: 18px;
+    cursor: pointer;
+    color: #000;
+}
+
+    .nav-right i:hover {
+        color: #555;
+    }
+
+/* NGÔN NGỮ */
+.lang-switch {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+}
+
+    .lang-switch span:hover {
+        color: #555;
+    }
+
+/* ================================================ */
+/* === CSS CHO DROPDOWN NGƯỜI DÙNG === */
+/* ================================================ */
+.user-menu-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    vertical-align: middle;
+    padding: 0 5px;
+}
+
+    .user-menu-container .icon {
+        width: 35px;
+        height: 35px;
+    }
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 15px;
+    min-width: 200px;
+    z-index: 1000;
+    text-align: left;
+}
+
+.user-menu-container:hover .user-dropdown {
+    display: block;
+}
+
+.user-dropdown .username-display {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.user-dropdown .logout-link,
+.user-dropdown .login-register-link {
+    display: block;
+    text-decoration: none;
+    color: #000;
+    font-weight: 600;
+    padding: 8px 0;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    transition: color 0.3s;
+}
+
+    .user-dropdown .logout-link:hover,
+    .user-dropdown .login-register-link:hover {
+        color: #555;
+        text-decoration: underline;
+    }
+
+/* === CSS CHO TRANG CHỦ === */
+.product-title {
+    font-weight: 600;
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+}
+
+.product-card {
+    border: 1px solid #f0f0f0;
+    text-align: center;
+    transition: box-shadow 0.3s ease;
+}
+
+    .product-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .product-card a {
+        text-decoration: none;
+    }
+
+.product-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+.product-info {
+    padding: 15px;
+}
+
+.product-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.product-price {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0;
+}
+
+/* ẨN MŨI TÊN SLIDER */
+#heroCarousel .carousel-control-prev,
+#heroCarousel .carousel-control-next {
+    display: none;
+}
+
+/* === CSS CHO NÚT (.btn-dark) === */
+.btn-dark {
+    --bs-btn-bg: #000;
+    --bs-btn-border-color: #000;
+    --bs-btn-hover-bg: #333;
+    --bs-btn-hover-border-color: #333;
+    --bs-btn-color: #fff;
+    --bs-btn-hover-color: #fff;
+    border-radius: 0;
+    font-weight: 600;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/* === CSS CHO GIỎ HÀNG RỖNG === */
+.empty-cart-container {
+    text-align: center;
+    padding: 60px 0;
+}
+
+    .empty-cart-container img {
+        max-width: 700px;
+        height: auto;
+        margin-bottom: 20px;
+    }
+
+    .empty-cart-container p {
+        font-size: 1.1rem;
+        color: #555;
+        margin-bottom: 30px;
+    }
+
+/* Nút Tiếp tục mua hàng */
+.btn-continue-shopping {
+    padding: 12px 30px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 50px !important;
+}
+
+/* Nút submit search */
+.search-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+    .search-button i {
+        color: #333;
+    }
+
+        .search-button i:hover {
+            color: #555;
+        }
+
+/* === CẤU HÌNH LAYOUT CHÍNH (ĐỂ ĐẨY FOOTER XUỐNG ĐÁY) === */
+/* Đây là phần quan trọng để footer không bị nhảy lên giữa màn hình */
+html, body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column; /* Xếp dọc: Nav -> Content -> Footer */
+    min-height: 100vh;
+}
+
+.main-content-wrapper {
+    flex: 1; /* Tự động giãn nở để chiếm khoảng trống, đẩy footer xuống */
+    width: 100%; /* Đảm bảo full màn hình */
+}
+
+footer {
+    flex-shrink: 0; /* Footer không bị co lại */
+}
+
+/* === CSS CHO GIỎ HÀNG === */
+.cart-header-row {
+    display: flex;
+    border-bottom: 2px solid #e9e9e9;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #555;
+}
+
+.cart-item-row {
+    display: flex;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cart-item-product {
+    flex: 3;
+    display: flex;
+    align-items: center;
+}
+
+    .cart-item-product img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        margin-right: 15px;
+        border-radius: 4px;
+    }
+
+    .cart-item-product .product-info-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .cart-item-product .product-info-text span:first-child {
+            font-weight: 600;
+        }
+
+        .cart-item-product .product-info-text span:last-child {
+            color: #777;
+        }
+
+.cart-item-quantity {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .cart-item-quantity button {
+        background: #f5f5f5;
+        border: none;
+        width: 30px;
+        height: 30px;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .cart-item-quantity span {
+        width: 40px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+.cart-item-total {
+    flex: 1;
+    font-weight: 600;
+    text-align: center;
+}
+
+.cart-item-remove {
+    flex: 1;
+    text-align: center;
+}
+
+    .cart-item-remove .btn-remove {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+
+        .cart-item-remove .btn-remove img {
+            width: 70px;
+            transition: opacity 0.3s;
+        }
+
+        .cart-item-remove .btn-remove:hover img {
+            opacity: 1;
+        }
+
+.cart-header-product {
+    flex: 3;
+}
+
+.cart-header-quantity {
+    flex: 1;
+    text-align: center;
+}
+
+.cart-header-total {
+    flex: 1;
+    text-align: center;
+}
+
+.cart-header-remove {
+    flex: 1;
+    text-align: center;
+}
+
+.cart-summary-box {
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 30px;
+}
+
+    .cart-summary-box .summary-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .cart-summary-box .btn-checkout {
+        width: 100%;
+        text-transform: uppercase;
+        padding: 12px;
+        font-weight: 600;
+        border-radius: 50px !important;
+    }
+
+/* === CSS CHO TRANG CHECKOUT === */
+.btn-checkout-custom {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    padding: 12px 30px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 50px !important;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+    margin-bottom: 50px;
+}
+
+    .btn-checkout-custom:hover {
+        background-color: #000;
+        border-color: #000;
+        color: #fff;
+    }
+
+.payment-options {
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+    .payment-options .form-check {
+        font-size: 1.1rem;
+    }
+
+        .payment-options .form-check:not(:last-child) {
+            margin-bottom: 10px;
+        }
+
+    .payment-options .form-check-input:disabled + .form-check-label {
+        color: #999;
+    }
+
+a.product-card-link,
+a.product-card-link:hover {
+    text-decoration: none;
+}
+
+/* === CSS CHO MODAL === */
+.btn-modal-white,
+.btn-modal-black {
+    padding: 12px 25px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 50px !important;
+    border: 2px solid #000;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.btn-modal-black {
+    background-color: #000;
+    color: #fff;
+}
+
+.btn-modal-white {
+    background-color: #fff;
+    color: #000;
+}
+
+.modal-footer-swappable .btn-modal-white:hover {
+    background-color: #000;
+    color: #fff;
+}
+
+    .modal-footer-swappable .btn-modal-white:hover + .btn-modal-black {
+        background-color: #fff;
+        color: #000;
+    }
+
+.modal-footer-swappable .btn-modal-black:hover {
+    background-color: #000;
+    color: #fff;
+}
+
+/* === CSS CHO ADMIN TABS === */
+.nav-tabs .nav-link {
+    color: #000 !important;
+    background-color: transparent !important;
+    border-color: #dee2e6 !important;
+    font-weight: 600;
+}
+
+    .nav-tabs .nav-link:hover {
+        border-color: #dee2e6 !important;
+        background-color: #f1f1f1 !important;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #fff !important;
+        background-color: #000 !important;
+        border-color: #000 !important;
+    }
+
+/* === CSS CHO HOVER ẢNH SẢN PHẨM === */
+.product-grid .product-card .product-image-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+}
+
+.product-grid .product-card .product-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s ease;
+}
+
+.product-grid .product-card .img-main {
+    opacity: 1;
+    z-index: 1;
+}
+
+.product-grid .product-card .img-hover {
+    opacity: 0;
+    z-index: 0;
+}
+
+.product-grid .product-card-link:hover .img-main {
+    opacity: 0;
+}
+
+.product-grid .product-card-link:hover .img-hover {
+    opacity: 1;
+}
+
+/* ========================================================= */
+/* === PHẦN CSS FOOTER (ĐÃ GOM LẠI & CHỈNH SỬA THEO Ý MÀY) === */
+/* ========================================================= */
+
+/* 1. Khung bao ngoài Footer */
+footer.site-footer {
+    background-color: #fff;
+    padding: 0; /* Giữ padding 0 để ảnh tràn viền */
+    border-top: none;
+    font-family: 'Montserrat', sans-serif;
+    /* Thuộc tính này kết hợp với body flex để đẩy footer xuống đáy khi nội dung ít */
+    margin-top: auto;
+}
+
+/* 2. Ảnh thanh ngang màu đen (Trên và Dưới) */
+.footer-top-bar-img {
+    width: 100%;
+    height: 50px; /* Chiều cao cố định thanh đen */
+    display: block; /* Xóa khoảng trắng thừa */
+    object-fit: fill; /* Kéo dãn ảnh */
+}
+
+/* 3. Khối nội dung màu trắng ở giữa (ĐÃ BÓP CHIỀU CAO) */
+.footer-content {
+    padding: 20px 0; /* Giảm từ 50px xuống 20px để "lùn" lại */
+}
+
+/* Cột thông tin */
+.footer-column {
+    margin-bottom: 0; /* Bỏ margin thừa dưới đáy cột */
+}
+
+/* 4. Logo Rosaria (ĐÃ KÉO SÁT SLOGAN) */
+.footer-logo {
+    width: 150px;
+    height: auto;
+    margin-bottom: 5px; /* Giảm từ 15px xuống 5px để slogan sát vào */
+}
+
+/* 5. Câu Slogan (ĐÃ LÀM TO HƠN) */
+.footer-tagline {
+    color: #555;
+    font-size: 16px; /* Tăng size chữ (to hơn 14px cũ) */
+    font-weight: 500; /* Đậm hơn xíu cho rõ */
+    margin-top: 0; /* Không bị đẩy xuống */
+}
+
+/* 6. Tiêu đề "contact" */
+.footer-contact-title {
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 5px; /* Giảm khoảng cách */
+    color: #000;
+    text-transform: lowercase; /* Chữ thường */
+}
+
+/* 7. Địa chỉ */
+.footer-address {
+    color: #555;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+/* 8. Icon Mạng xã hội */
+.social-icons {
+    display: flex;
+    gap: 10px;
+    /* Canh phải được xử lý trong HTML bằng class justify-content-end */
+}
+
+.social-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #333;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+    .social-icon:hover {
+        background-color: #000;
+        color: #fff;
+    }

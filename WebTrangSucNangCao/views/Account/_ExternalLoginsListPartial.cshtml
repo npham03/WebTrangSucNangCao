@@ -1,0 +1,33 @@
+﻿@model WebTrangSucNangCao.Models.ExternalLoginListViewModel
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+
+<h4>Use another service to log in.</h4>
+<hr />
+
+@{
+    var loginProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+    if (loginProviders.Count == 0)
+    {
+        <div>
+            <p>
+                There are no external authentication services configured.
+            </p>
+        </div>
+    }
+    else
+    {
+        <form asp-controller="Account" asp-action="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" role="form">
+            <div id="socialLoginList">
+                <p>
+                    @foreach (var provider in loginProviders)
+                    {
+                        <button type="submit" class="btn btn-outline-dark" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">
+                            @provider.DisplayName
+                        </button>
+                    }
+                </p>
+            </div>
+        </form>
+    }
+}

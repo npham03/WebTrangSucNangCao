@@ -1,0 +1,87 @@
+﻿@model WebTrangSucNangCao.Models.Product
+@{
+    ViewData["Title"] = "Tạo Sản Phẩm Mới";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2>Tạo Sản Phẩm Mới</h2>
+
+            <form asp-controller="Admin" asp-action="AddProduct" method="post" enctype="multipart/form-data">
+
+                <div class="form-horizontal">
+                    <hr />
+                    <div asp-validation-summary="All" class="text-danger"></div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Tên sản phẩm</label>
+                        <div class="col-md-10">
+                            <input asp-for="NamePro" class="form-control" />
+                            <span asp-validation-for="NamePro" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Mô tả</label>
+                        <div class="col-md-10">
+                            <textarea asp-for="DecriptionPro" rows="5" cols="40" class="form-control"></textarea>
+                            <span asp-validation-for="DecriptionPro" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Chất liệu</label>
+                        <div class="col-md-10">
+                            <textarea asp-for="Material" rows="3" cols="40" class="form-control"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Danh mục</label>
+                        <div class="col-md-10">
+                            <select asp-for="Category" asp-items="ViewBag.CategoryList" class="form-control">
+                                <option value="">--- Chọn danh mục ---</option>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Giá</label>
+                        <div class="col-md-10">
+                            <input asp-for="Price" type="number" class="form-control" />
+                            <span asp-validation-for="Price" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Số lượng kho ban đầu</label>
+                        <div class="col-md-10">
+                            <input type="number" name="InitialStock" class="form-control" value="10" required />
+                            <small class="text-muted">Nếu sản phẩm không có size (như khuyên tai), nhập số lượng vào đây.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label col-md-2">Ảnh sản phẩm (Giữ Ctrl để chọn nhiều)</label>
+                        <div class="col-md-10">
+                            <input type="file" name="ImageFiles" required multiple class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="col-md-offset-2 col-md-10">
+                            <button type="submit" class="btn btn-primary">Tạo mới</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,81 @@
+﻿@model WebTrangSucNangCao.Models.CheckoutViewModel
+@{
+    // Xài ViewData chứ đéo xài ViewBag
+    ViewData["Title"] = "Thanh Toán";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h2>Thanh Toán</h2>
+    <hr />
+    <div class="row">
+        <div class="col-md-7">
+            <h4>Thông tin giao hàng</h4>
+
+            <form asp-controller="Cart" asp-action="Checkout" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="form-group mb-3">
+                    <label>Họ và Tên</label>
+                    <input asp-for="FullName" class="form-control" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Số điện thoại</label>
+                    <input asp-for="Phone" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Địa chỉ giao hàng</label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                <hr />
+                <h5 class="mt-4">Phương thức thanh toán</h5>
+                <div class="payment-options">
+                    @* 1. Ship COD (mặc định) *@
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="cod" value="COD" checked>
+                        <label class="form-check-label" for="cod">
+                            Ship COD (Thanh toán khi nhận hàng)
+                        </label>
+                    </div>
+                    @* 2. QR Code (làm mờ đi) *@
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="qr" value="QR" disabled>
+                        <label class="form-check-label" for="qr">
+                            Thanh toán bằng QR code (Đang bảo trì)
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-checkout-custom w-100 mt-4">Xác nhận đặt hàng</button>
+            </form>
+        </div>
+
+        <div class="col-md-5">
+            <h4>Đơn hàng của bạn</h4>
+            <table class="table">
+                @foreach (var item in Model.CartItems)
+                {
+                    <tr>
+                        <td>
+                            <img src="@Url.Content(item.ImagePro)" style="width: 50px; height: 50px; object-fit: cover;" />
+                            @item.NamePro <span class="text-muted">x @item.Quantity</span>
+                        </td>
+                        <td class="text-end">
+                            @String.Format("{0:N0} VNĐ", item.Price * item.Quantity)
+                        </td>
+                    </tr>
+                }
+                <tr class="fw-bold">
+                    <td>Tổng cộng</td>
+                    <td class="text-end">@String.Format("{0:N0} VNĐ", Model.GrandTotal)</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>

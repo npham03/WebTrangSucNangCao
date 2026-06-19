@@ -1,0 +1,80 @@
+﻿@model WebTrangSucNangCao.Models.OrderPro
+@{
+    ViewData["Title"] = "Chi tiết Đơn hàng #" + Model.Id;
+    Layout = "_Layout";
+    decimal grandTotal = 0;
+}
+
+<div class="container mt-5">
+    <h3>Chi tiết Đơn hàng #@Model.Id</h3>
+    <hr />
+
+    <div class="row mb-4 p-3 bg-light rounded">
+        <div class="col-md-6">
+            <strong>Khách hàng:</strong>
+            @(Model.IdcusNavigation != null ? Model.IdcusNavigation.NameCus : "Khách vãng lai")
+        </div>
+        <div class="col-md-6">
+            <strong>Ngày đặt:</strong>
+            @Model.DateOrder
+        </div>
+        <div class="col-md-6">
+            <strong>Địa chỉ giao:</strong>
+            @Model.AddressDeliverry
+        </div>
+        <div class="col-md-6">
+            <strong>Trạng thái:</strong>
+            <span style="font-weight:bold; color: #b8860b;">@Model.Status</span>
+        </div>
+    </div>
+
+    <h4>Các sản phẩm đã đặt</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ảnh</th>
+                <th>Tên Sản Phẩm</th>
+                <th>Size</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var detail in Model.OrderDetails)
+            {
+                var lineTotal = (decimal)(detail.Quantity ?? 0) * (decimal)(detail.UnitPrice ?? 0);
+                grandTotal += lineTotal;
+
+                <tr>
+                    <td>
+                        <img src="~/@detail.IdproductNavigation?.ImagePro" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />
+                    </td>
+                    <td>@detail.IdproductNavigation?.NamePro</td>
+
+                    <td>
+                        @if (detail.Variant != null)
+                        {
+                            <span class="badge bg-secondary">@detail.Variant.VariantName</span>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </td>
+                    <td>@detail.Quantity</td>
+                    <td>@String.Format("{0:N0} VNĐ", detail.UnitPrice)</td>
+                    <td>@String.Format("{0:N0} VNĐ", lineTotal)</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="fw-bold fs-5" style="border-top: 2px solid #333;">
+                <td colspan="5" class="text-end">Tổng cộng:</td>
+                <td>@String.Format("{0:N0} VNĐ", grandTotal)</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <a asp-controller="Admin" asp-action="Orders" class="btn btn-secondary mt-3">Quay lại danh sách</a>
+</div>

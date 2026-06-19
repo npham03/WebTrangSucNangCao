@@ -1,0 +1,93 @@
+﻿@model IEnumerable<WebTrangSucNangCao.Models.OrderPro>
+@{
+    ViewData["Title"] = "Lịch sử mua hàng";
+    Layout = "_Layout";
+}
+<div class="container mt-5">
+    <h2 class="mb-4 text-uppercase" style="font-weight: 600;">Lịch sử đơn hàng của bạn</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-cart-container text-center">
+            <img src="~/imgages/giohangtrong.png" alt="Chưa có đơn hàng" style="max-width: 700px;" />
+
+            <p class="mt-3 text-muted">Bạn chưa mua đơn hàng nào tại Rosaria.</p>
+
+            <a asp-controller="Home" asp-action="Index" class="btn btn-dark btn-continue-shopping">
+                MUA SẮM NGAY
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-10 mx-auto">
+                @foreach (var order in Model)
+                {
+                    // Tính tổng tiền của đơn hàng này
+                    decimal orderTotal = 0;
+                    if (order.OrderDetails != null)
+                    {
+                        orderTotal = (decimal)order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
+                    }
+
+                    <div class="card mb-4 shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <span class="fw-bold">Mã đơn: #@order.Id</span> <span class="text-muted mx-2">|</span>
+                                <span class="text-muted small">Ngày đặt: @(order.DateOrder.HasValue ? order.DateOrder.Value.ToString("dd/MM/yyyy HH:mm") : "N/A")</span>
+                            </div>
+                            <div>
+                                @if (order.Status == "Đang giao")
+                                {
+                                    <span class="badge bg-secondary text-white rounded-pill px-3">@order.Status</span>
+                                }
+                                else if (order.Status == "Hoàn tất")
+                                {
+                                    <span class="badge bg-white text-dark border border-dark rounded-pill px-3">@order.Status</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-dark text-white rounded-pill px-3">@order.Status</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            @foreach (var detail in order.OrderDetails)
+                            {
+                                <div class="d-flex align-items-center mb-3 pb-3 border-bottom last-no-border">
+                                    <div style="width: 70px; height: 70px; flex-shrink: 0;">
+                                        <img src="~/@(detail.IdproductNavigation?.ImagePro ?? "Content/Img/placeholder.png")"
+                                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
+                                    </div>
+
+                                    <div class="ms-3 flex-grow-1">
+                                        <h6 class="mb-1 fw-bold">@detail.IdproductNavigation?.NamePro</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Số lượng: x @detail.Quantity</small>
+                                            <span class="fw-bold">@String.Format("{0:N0}đ", detail.UnitPrice)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="card-footer bg-light border-0 text-end py-3">
+                            <span class="text-muted me-2">Tổng thành tiền:</span>
+                            <span class="fs-5 fw-bold text-dark">@String.Format("{0:N0}đ", orderTotal)</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .last-no-border:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+</style>

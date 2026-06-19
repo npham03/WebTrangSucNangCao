@@ -1,0 +1,38 @@
+﻿@model IEnumerable<WebTrangSucNangCao.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "Quản lý Người dùng";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h2>Quản lý Người dùng</h2>
+
+    <table class="table table-bordered table-striped align-middle mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Email (Username)</th>
+                <th>Họ và Tên</th>
+                <th>SĐT</th>
+                <th>Địa chỉ</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Email</td>
+                    <td>@(item.Name) @(item.LastName)</td>
+                    <td>@item.PhoneNumber</td>
+                    <td>@item.Address</td>
+                    <td class="text-center">
+                        <a asp-controller="Admin" asp-action="EditUser" asp-route-id="@item.Id"
+                           class="btn btn-warning btn-sm">Sửa</a>
+                        <a asp-controller="Admin" asp-action="DeleteUser" asp-route-id="@item.Id"
+                           class="btn btn-danger btn-sm" onclick="return confirm('Chắc chắn xóa user này?')">Xóa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,76 @@
+﻿@model IEnumerable<WebTrangSucNangCao.Models.OrderPro>
+@{
+    ViewData["Title"] = "Quản lý Đơn hàng";
+    Layout = "_Layout";
+    var currentFilter = ViewBag.CurrentFilter as string;
+}
+
+<div class="container mt-5">
+    <h2>Quản lý Đơn hàng</h2>
+
+    <ul class="nav nav-tabs mt-3 mb-3">
+        <li class="nav-item">
+            <a class="nav-link @(string.IsNullOrEmpty(currentFilter) || currentFilter == "Tất cả" ? "active" : "")"
+               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Tất cả">Tất cả</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(currentFilter == "Đang xử lý" ? "active" : "")"
+               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang xử lý">Đang xử lý</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(currentFilter == "Đang giao" ? "active" : "")"
+               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang giao">Đang giao</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(currentFilter == "Hoàn tất" ? "active" : "")"
+               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Hoàn tất">Hoàn tất</a>
+        </li>
+    </ul>
+
+    <table class="table table-bordered table-striped align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã ĐH</th>
+                <th>Tên Khách Hàng</th>
+                <th>Ngày Đặt</th>
+                <th>Địa chỉ Giao</th>
+                <th>Trạng Thái</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@(item.IdcusNavigation != null ? item.IdcusNavigation.NameCus : "Khách vãng lai")</td>
+                    <td>@(item.DateOrder.HasValue ? item.DateOrder.Value.ToString("dd/MM/yyyy") : "")</td>
+                    <td>@item.AddressDeliverry</td>
+                    <td>
+                        @if (item.Status == "Hoàn tất")
+                        {
+                            <span class="badge bg-success">@item.Status</span>
+                        }
+                        else if (item.Status == "Đang xử lý")
+                        {
+                            <span class="badge bg-danger">@item.Status</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@item.Status</span>
+                        }
+                    </td>
+                    <td>
+                        @if (item.Status != "Hoàn tất")
+                        {
+                            <a asp-controller="Admin" asp-action="EditOrder" asp-route-id="@item.Id"
+                               class="btn btn-outline-dark btn-sm" style="background-color: white; border-radius: 4px; padding: 5px 10px;">Cập nhật trạng thái</a>
+                        }
+                        <a asp-controller="Admin" asp-action="OrderDetails" asp-route-id="@item.Id"
+                           class="btn btn-dark btn-sm ms-1" style="border-radius: 4px; padding: 5px 10px;">Chi tiết</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

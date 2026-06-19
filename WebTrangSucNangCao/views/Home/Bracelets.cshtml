@@ -1,0 +1,49 @@
+﻿@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
+@{
+    // Xài ViewData chứ đéo xài ViewBag
+    ViewData["Title"] = "Bracelets";
+    // Layout viết gọn lại
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h2 class="text-center product-title">Bracelets</h2>
+
+    @if (!Model.Any())
+    {
+        <p class="text-center">Chưa có sản phẩm nào...</p>
+    }
+    else
+    {
+        <div class="product-grid">
+            <div class="row gy-4">
+                @foreach (var pvm in Model)
+                {
+                    <div class="col-md-3">
+                        <a asp-controller="Product" asp-action="Detail" asp-route-id="@pvm.Product.ProductId" class="product-card-link">
+                            <div class="product-card">
+
+                                <div class="product-image-wrapper">
+                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                         class="product-image img-main" alt="@pvm.Product.NamePro">
+
+                                    @if (pvm.HoverImage != null)
+                                    {
+                                        <img src="@Url.Content(pvm.HoverImage)"
+                                             class="product-image img-hover" alt="@pvm.Product.NamePro">
+                                    }
+                                </div>
+
+                                <div class="product-info">
+                                    <h5 class="product-name">@pvm.Product.NamePro</h5>
+                                    <p class="product-price">@String.Format("{0:N0} VNĐ", pvm.Product.Price)</p>
+                                </div>
+
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

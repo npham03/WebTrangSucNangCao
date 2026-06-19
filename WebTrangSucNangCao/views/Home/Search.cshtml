@@ -1,0 +1,58 @@
+﻿@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
+@{
+    // Xài ViewData chứ đéo xài ViewBag cho cái Title
+    ViewData["Title"] = "Kết quả tìm kiếm";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+
+    @* Hiển thị chữ "Kết quả cho..." (Cái SearchTerm này xài ViewBag tạm cũng được đéo sao) *@
+    <h2 class="text-center product-title">
+        KẾT QUẢ TÌM KIẾM CHO "@ViewBag.SearchTerm"
+    </h2>
+
+    @* Kiểm tra xem có tìm thấy gì không *@
+    @if (!Model.Any())
+    {
+        <div class="text-center" style="padding: 50px 0;">
+            <p class="fs-5 text-muted">Không tìm thấy sản phẩm nào phù hợp.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-dark rounded-pill px-4">Về trang chủ</a>
+        </div>
+    }
+    else
+    {
+        <div class="product-grid">
+            <div class="row gy-4">
+                @foreach (var pvm in Model)
+                {
+                    <div class="col-md-3">
+                        <a asp-controller="Product" asp-action="Detail" asp-route-id="@pvm.Product.ProductId" class="product-card-link">
+                            <div class="product-card">
+
+                                <div class="product-image-wrapper">
+                                    @* Ảnh chính: Đéo xài Url.Content nữa, nhét dấu ~/ vào là xong *@
+                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                         class="product-image img-main" alt="@pvm.Product.NamePro">
+
+                                    @* Ảnh Hover (Nếu có) *@
+                                    @if (pvm.HoverImage != null)
+                                    {
+                                        <img src="@Url.Content(pvm.HoverImage)"
+                                             class="product-image img-hover" alt="@pvm.Product.NamePro">
+                                    }
+                                </div>
+
+                                <div class="product-info">
+                                    <h5 class="product-name">@pvm.Product.NamePro</h5>
+                                    <p class="product-price">@String.Format("{0:N0} VNĐ", pvm.Product.Price)</p>
+                                </div>
+
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,40 @@
+﻿@model WebTrangSucNangCao.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<main aria-labelledby="title">
+    <div class="row justify-content-center pt-5 pb-5">
+        <div class="col-md-8 ">
+            <section id="loginForm">
+                <h4 class="text-center mb-4">ĐĂNG NHẬP</h4>
+                <hr />
+
+                <form asp-controller="Account" asp-action="Login" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" role="form">
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="form-group mb-3 custom-input-group">
+                        <label asp-for="Email" class="form-label">Email của bạn</label>
+                        <input asp-for="Email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-4 custom-input-group">
+                        <label asp-for="Password" class="form-label">Nhập mật khẩu</label>
+                        <input asp-for="Password" class="form-control" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <button type="submit" class="btn btn-outline-dark w-100 btn-lg">Đăng nhập</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

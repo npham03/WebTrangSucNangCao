@@ -1,0 +1,153 @@
+﻿@model WebTrangSucNangCao.Models.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 fw-bold text-uppercase">Dashboard Quản Trị</h2>
+
+    @* === PHẦN 1: CÁC THẺ THỐNG KÊ === *@
+    <div class="row mb-5">
+        <div class="col-md-3">
+            <div class="card text-white bg-dark mb-3 h-100 shadow-sm">
+                <div class="card-header fw-bold">DOANH SỐ</div>
+                <div class="card-body">
+                    <h3 class="card-title">@String.Format("{0:N0} VNĐ", Model.TotalRevenue)</h3>
+                    <p class="card-text small text-white-50">Tổng tiền đơn hoàn tất</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3 h-100 shadow-sm">
+                <div class="card-header fw-bold">ĐƠN CHỜ XỬ LÝ</div>
+                <div class="card-body">
+                    <h3 class="card-title">@Model.PendingOrdersCount Đơn</h3>
+                    <p class="card-text small text-white-50">Cần duyệt gấp</p>
+
+                    @if (Model.PendingOrdersCount > 0)
+                    {
+                        <a asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang xử lý"
+                           class="btn btn-light btn-sm fw-bold mt-2">Xem ngay &rarr;</a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-dark bg-white mb-3 h-100 shadow-sm" style="border: 1px solid #000;">
+                <div class="card-header fw-bold bg-transparent border-bottom border-dark">ĐÃ BÁN RA</div>
+                <div class="card-body">
+                    <h3 class="card-title">@Model.TotalProductsSold SP</h3>
+                    <p class="card-text small text-muted">Tổng sản phẩm đến tay khách</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-dark bg-white mb-3 h-100 shadow-sm" style="border: 1px solid #000;">
+                <div class="card-header fw-bold bg-transparent border-bottom border-dark">KHO SẢN PHẨM</div>
+                <div class="card-body">
+                    <h3 class="card-title">@Model.Products.Count SP</h3>
+                    <p class="card-text small text-muted">Tổng mã sản phẩm hiện có</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @* === PHẦN 2: BẢNG CẢNH BÁO HẾT HÀNG === *@
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4" style="border: 1px solid #000;">
+                <div class="card-header bg-white fw-bold border-bottom-0 pt-3">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i> CẢNH BÁO SẮP HẾT HÀNG (Kho <= 5)
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.LowStockVariants.Any())
+                    {
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Size</th>
+                                    <th>Còn lại</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.LowStockVariants)
+                                {
+                                    <tr>
+                                        <td>@(item.Product != null ? item.Product.NamePro : "Unknown")</td>
+                                        <td><span class="badge bg-secondary">@item.VariantName</span></td>
+                                        <td class="fw-bold text-danger">@item.Stock</td>
+                                        <td>
+                                            <a asp-controller="Admin" asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-dark">Nhập hàng</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-center text-success">
+                            <i class="fas fa-check-circle"></i> Kho hàng đang ổn định!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* === PHẦN 3: QUẢN LÝ SLIDER === *@
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold pt-3">
+                    <i class="fas fa-images me-2"></i> QUẢN LÝ SLIDER
+                </div>
+                <div class="card-body">
+                    <form asp-controller="Admin" asp-action="AddSlider" method="post" enctype="multipart/form-data" class="row g-2 mb-3">
+                        <div class="col-8">
+                            <input type="file" name="ImageFile" class="form-control" required />
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-dark w-100">Thêm Slider</button>
+                        </div>
+                        <div class="col-12">
+                            <input asp-for="NewSlider.Link" class="form-control form-control-sm" placeholder="Link khi click (tùy chọn)" />
+                        </div>
+                    </form>
+
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ảnh</th>
+                                <th>Link</th>
+                                <th>Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var slider in Model.Sliders)
+                            {
+                                <tr>
+                                    <td>
+                                        <img src="~/@slider.ImagePath" style="height: 40px; width: auto;" />
+                                    </td>
+                                    <td class="small text-truncate" style="max-width: 150px;">
+                                        @slider.Link
+                                    </td>
+                                    <td>
+                                        <form asp-controller="Admin" asp-action="DeleteSlider" asp-route-id="@slider.SliderId" method="post" class="m-0 p-0">
+                                            <button type="submit" class="btn btn-danger btn-sm py-0" onclick="return confirm('Xóa banner này?')">&times;</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
