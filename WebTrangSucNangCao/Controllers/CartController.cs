@@ -317,6 +317,8 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Checkout(CheckoutViewModel viewModel)
         {
+            ModelState.Remove("CartItems");
+            ModelState.Remove("GrandTotal");
             if (!ModelState.IsValid)
             {
                 viewModel.CartItems = GetCartItems();

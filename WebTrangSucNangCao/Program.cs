@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using WebTrangSucNangCao.Models; // Sửa theo namespace của bạn
+using WebTrangSucNangCao.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,10 +28,20 @@ builder.Services.AddSession(options => {
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+// seed data
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
 
+    await DbInitializer.SeedRolesAndAdminAsync(services);
+}
+// -----------------------------------------------------------
 // Sử dụng Session
 app.UseSession();
 app.UseStaticFiles();
+
+app.UseMiddleware<WebTrangSucNangCao.Models.PerformanceLogMiddleware>();
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

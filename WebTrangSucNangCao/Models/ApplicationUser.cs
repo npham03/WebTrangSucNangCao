@@ -6,8 +6,8 @@ namespace WebTrangSucNangCao.Models
     public class ApplicationUser : IdentityUser
     {
         // Khai báo thêm mấy cột mà View mày đang gọi
-        public string Name { get; set; }
-        public string LastName { get; set; }
-        public string Address { get; set; }
+        public string? Name { get; set; }
+        public string? LastName { get; set; }
+        public string? Address { get; set; }
     }
 }
