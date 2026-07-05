@@ -1,4 +1,4 @@
-﻿@model WebTrangSucNangCao.Models.ProductDetailViewModel
+@model WebTrangSucNangCao.Models.ProductDetailViewModel
 @{
     ViewData["Title"] = Model.Product.NamePro;
     Layout = "_Layout";
@@ -278,7 +278,7 @@
                         <div class="col-md-3">
                             <a href="@Url.Action("Detail", "Product", new { id = product.ProductId })" class="product-card-link">
                                 <div class="product-card">
-                                    <img src="@Url.Content(product.ImagePro ?? "~/Content/Img/placeholder.png")" class="product-image" alt="@product.NamePro">
+                                    <img src="@Url.Content(product.ImagePro ?? "~/images/placeholder.png")" class="product-image" alt="@product.NamePro">
                                     <div class="product-info">
                                         <h5 class="product-name">@product.NamePro</h5>
                                         <p class="product-price">@String.Format("{0:N0} VNĐ", product.Price)</p>

@@ -1,4 +1,4 @@
-﻿@model WebTrangSucNangCao.Models.ProductEditViewModel
+@model WebTrangSucNangCao.Models.ProductEditViewModel
 @{
     // Xài ViewData đéo xài ViewBag
     ViewData["Title"] = "Sửa Sản Phẩm";
@@ -77,7 +77,7 @@
                 @foreach (var img in Model.Images)
                 {
                     <tr>
-                        <td><img src="~/@img.ImagePath" style="width: 50px; height: 50px; object-fit: cover;" /></td>
+                        <td><img src="@Url.Content(img.ImagePath)" style="width: 50px; height: 50px; object-fit: cover;" /></td>
                         <td>
                             <form asp-controller="Admin" asp-action="DeleteImage" method="post" class="m-0 p-0">
                                 <input type="hidden" name="imageId" value="@img.ImageId" />

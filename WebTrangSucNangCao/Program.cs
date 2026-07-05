@@ -40,6 +40,50 @@ using (var scope = app.Services.CreateScope())
 app.UseSession();
 app.UseStaticFiles();
 
+// Backward compatibility: Hỗ trợ tự động map các đường dẫn ảnh cũ (imgages, imagesProducts, Content/Img) vào thư mục images chuẩn
+var imagesPath = Path.Combine(builder.Environment.WebRootPath, "images");
+if (Directory.Exists(imagesPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(imagesPath),
+        RequestPath = "/imgages"
+    });
+}
+var productsPath = Path.Combine(builder.Environment.WebRootPath, "images", "products");
+if (Directory.Exists(productsPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(productsPath),
+        RequestPath = "/imagesProducts"
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(productsPath),
+        RequestPath = "/Content/Img/Products"
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(productsPath),
+        RequestPath = "/Content/Img"
+    });
+}
+var bannersPath = Path.Combine(builder.Environment.WebRootPath, "images", "banners");
+if (Directory.Exists(bannersPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(bannersPath),
+        RequestPath = "/imagesBanners"
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(bannersPath),
+        RequestPath = "/Content/Img/Banners"
+    });
+}
+
 app.UseMiddleware<WebTrangSucNangCao.Models.PerformanceLogMiddleware>();
 
 app.UseRouting();

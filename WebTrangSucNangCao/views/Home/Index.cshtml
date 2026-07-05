@@ -1,4 +1,4 @@
-﻿@model WebTrangSucNangCao.Models.HomeViewModel
+@model WebTrangSucNangCao.Models.HomeViewModel
 @{
     // Xài ViewData đéo xài ViewBag nữa
     ViewData["Title"] = "Trang Chủ";
@@ -229,7 +229,7 @@
                     <a asp-controller="Product" asp-action="Detail" asp-route-id="@pvm.Product.ProductId" class="product-card-link">
                         <div class="product-card">
                             <div class="product-image-wrapper">
-                                <img src="@Url.Content(pvm.Product.ImagePro ?? "~/imgages/placeholder.png")" class="product-image img-main" alt="@pvm.Product.NamePro">
+                                <img src="@Url.Content(pvm.Product.ImagePro ?? "~/images/placeholder.png")" class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                 @if (pvm.HoverImage != null)
                                 {

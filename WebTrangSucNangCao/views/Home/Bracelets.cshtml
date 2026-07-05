@@ -1,4 +1,4 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
+@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
 @{
     // Xài ViewData chứ đéo xài ViewBag
     ViewData["Title"] = "Bracelets";
@@ -24,7 +24,7 @@
                             <div class="product-card">
 
                                 <div class="product-image-wrapper">
-                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "~/images/placeholder.png")"
                                          class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                     @if (pvm.HoverImage != null)

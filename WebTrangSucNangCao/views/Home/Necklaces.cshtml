@@ -1,4 +1,4 @@
-﻿@* SỬA DÒNG NÀY: Từ Product -> ProductHomeViewModel *@
+@* SỬA DÒNG NÀY: Từ Product -> ProductHomeViewModel *@
 @model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
 @{
     ViewData["Title"] = "Necklaces";
@@ -23,7 +23,7 @@
 
                                 <div class="product-image-wrapper">
 
-                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "~/images/placeholder.png")"
                                          class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                     @if (pvm.HoverImage != null)
