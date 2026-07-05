@@ -1,0 +1,61 @@
+@{
+    ViewData["Title"] = "Thanh Toán QR Code";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5 mb-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-0 rounded-3 p-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-uppercase mb-2">Quét mã QR để thanh toán</h3>
+                    <p class="text-muted mb-4">Đơn hàng <strong>#@ViewBag.OrderId</strong> đã được tạo thành công!</p>
+
+                    <div class="bg-light p-3 rounded mb-4 d-inline-block border">
+                        <img src="@ViewBag.QrUrl" alt="Mã QR Thanh Toán" style="max-width: 280px; width: 100%; height: auto; border-radius: 8px; background: white; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" />
+                    </div>
+
+                    <div class="text-start bg-light p-3 rounded mb-4 text-small">
+                        <h6 class="fw-bold border-bottom pb-2 mb-2">Thông tin chuyển khoản:</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Ngân hàng:</span>
+                            <span class="fw-bold">MB Bank (970422)</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Số tài khoản:</span>
+                            <span class="fw-bold text-primary">0928023638</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Chủ tài khoản:</span>
+                            <span class="fw-bold">PHAM VAN NGHIA</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Số tiền cần chuyển:</span>
+                            <span class="fw-bold text-danger fs-5">@String.Format("{0:N0} VNĐ", ViewBag.TotalAmount)</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Nội dung chuyển khoản:</span>
+                            <span class="fw-bold text-dark">Thanh toan don hang @ViewBag.OrderId Rosaria</span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info small text-start">
+                        <i class="bi bi-info-circle-fill me-1"></i> Sau khi chuyển khoản thành công, hệ thống sẽ tự động xác nhận và tiến hành giao hàng cho bạn trong thời gian sớm nhất.
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <a asp-controller="Manage" asp-action="MyOrders" class="btn btn-outline-dark px-4 py-2 fw-bold">
+                            XEM ĐƠN HÀNG
+                        </a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-dark px-4 py-2 fw-bold">
+                            TIẾP TỤC MUA SẮM
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

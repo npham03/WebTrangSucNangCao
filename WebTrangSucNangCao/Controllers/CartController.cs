@@ -398,7 +398,12 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             // 5. Xóa giỏ hàng
             ClearCart();
 
-            // 6. Chuyển qua trang Cảm ơn
+            // 6. Chuyển qua trang Cảm ơn hoặc trang QR
+            string paymentMethod = HttpContext.Request.Form["paymentMethod"];
+            if (paymentMethod == "QR")
+            {
+                return RedirectToAction("PaymentQR", new { orderId = newOrder.Id });
+            }
             return RedirectToAction("ThankYou");
         }
 
