@@ -1,0 +1,42 @@
+@model WebTrangSucNangCao.Models.ApplicationUser
+@{
+    ViewData["Title"] = "Sửa Người Dùng";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h2>Sửa Thông Tin Người Dùng</h2>
+    <hr />
+
+    <form asp-controller="Admin" asp-action="EditUser" method="post">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="form-group mb-3">
+            <label class="form-label">Email (Username)</label>
+            <input type="text" class="form-control" value="@Model.Email" readonly disabled />
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Họ</label>
+            <input type="text" asp-for="LastName" class="form-control" placeholder="Nhập họ..." />
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Tên</label>
+            <input type="text" asp-for="Name" class="form-control" placeholder="Nhập tên..." />
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Số Điện Thoại</label>
+            <input type="text" asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại..." />
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Địa Chỉ</label>
+            <input type="text" asp-for="Address" class="form-control" placeholder="Nhập địa chỉ..." />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Lưu Thay Đổi</button>
+        <a asp-controller="Admin" asp-action="Users" class="btn btn-secondary">Quay lại danh sách</a>
+    </form>
+</div>

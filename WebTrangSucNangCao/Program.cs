@@ -77,7 +77,6 @@ if (Directory.Exists(bannersPath))
     });
 }
 
-app.UseMiddleware<WebTrangSucNangCao.Models.PerformanceLogMiddleware>();
 
 app.UseRouting();
 app.UseAuthentication();

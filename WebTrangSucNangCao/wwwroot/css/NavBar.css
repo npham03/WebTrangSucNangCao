@@ -1,4 +1,4 @@
-﻿/* PHẦN 0: RESET CƠ BẢN */
+/* PHẦN 0: RESET CƠ BẢN */
 * {
     margin: 0;
     padding: 0;
@@ -291,7 +291,8 @@
 /* === CẤU HÌNH LAYOUT CHÍNH (ĐỂ ĐẨY FOOTER XUỐNG ĐÁY) === */
 /* Đây là phần quan trọng để footer không bị nhảy lên giữa màn hình */
 html, body {
-    height: 100%;
+    min-height: 100%;
+    height: auto;
 }
 
 body {
@@ -303,6 +304,7 @@ body {
 .main-content-wrapper {
     flex: 1; /* Tự động giãn nở để chiếm khoảng trống, đẩy footer xuống */
     width: 100%; /* Đảm bảo full màn hình */
+    min-height: 100vh; /* Đảm bảo phần body luôn cao tối thiểu 1 màn hình, lướt xuống mới thấy footer */
 }
 
 footer {

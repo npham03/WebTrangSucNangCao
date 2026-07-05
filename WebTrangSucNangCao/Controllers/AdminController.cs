@@ -375,6 +375,65 @@ namespace WebTrangSucNangCao.Controllers
             return View(users);
         }
 
+        // SỬA USER (GET)
+        public ActionResult EditUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest();
+            }
+
+            var user = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return View(user);
+        }
+
+        // SỬA USER (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditUser(string id, string? Name, string? LastName, string? PhoneNumber, string? Address)
+        {
+            var dbUser = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (dbUser == null)
+            {
+                return NotFound();
+            }
+
+            dbUser.Name = Name;
+            dbUser.LastName = LastName;
+            dbUser.PhoneNumber = PhoneNumber;
+            dbUser.Address = Address;
+
+            _database.SaveChanges();
+
+            return RedirectToAction("Users");
+        }
+
+        // XÓA USER (GET / POST)
+        public ActionResult DeleteUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest();
+            }
+
+            var user = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (user != null)
+            {
+                if (user.Email != "admin@rosaria.com") // Bảo vệ tài khoản admin chính
+                {
+                    _database.Users.Remove(user);
+                    _database.SaveChanges();
+                }
+            }
+
+            return RedirectToAction("Users");
+        }
+
         // LẤY CHI TIẾT ĐƠN HÀNG(GET)
         public ActionResult OrderDetails(int? id)
         {
