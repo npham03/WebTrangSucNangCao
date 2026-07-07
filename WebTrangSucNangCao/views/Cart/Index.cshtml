@@ -97,7 +97,7 @@
 
                     <div class="cart-item-row d-flex align-items-center mb-3 pb-3 border-bottom" id="row-@item.VariantId">
                         <div class="cart-item-product flex-grow-1 d-flex align-items-center">
-                            <img src="@Url.Content(item.ImagePro)" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px;" />
+                            <img src="@Url.Content(Url.NormalizeImagePath(item.ImagePro))" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px;" />
                             <div class="product-info-text">
                                 <span class="d-block fw-bold">@item.NamePro</span>
                                 <span class="d-block small text-muted">Size: @item.VariantName</span>

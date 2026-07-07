@@ -32,13 +32,13 @@
 
                                 <div class="product-image-wrapper">
                                     @* Ảnh chính: Đéo xài Url.Content nữa, nhét dấu ~/ vào là xong *@
-                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                    <img src="@Url.Content(Url.NormalizeImagePath(pvm.Product.ImagePro ?? "~/imgages/placeholder.png"))"
                                          class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                     @* Ảnh Hover (Nếu có) *@
                                     @if (pvm.HoverImage != null)
                                     {
-                                        <img src="@Url.Content(pvm.HoverImage)"
+                                        <img src="@Url.Content(Url.NormalizeImagePath(pvm.HoverImage))"
                                              class="product-image img-hover" alt="@pvm.Product.NamePro">
                                     }
                                 </div>

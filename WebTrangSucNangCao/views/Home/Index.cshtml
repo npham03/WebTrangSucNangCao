@@ -154,7 +154,7 @@
             var slider = Model.Sliders[i];
             <div class="carousel-item @(i == 0 ? "active" : "")" data-bs-interval="4000">
                 <a href="@(slider.Link ?? "#")">
-                    <img src="@Url.Content(slider.ImagePath)" alt="@slider.Title" class="d-block w-100">
+                    <img src="@Url.Content(Url.NormalizeImagePath(slider.ImagePath))" alt="@slider.Title" class="d-block w-100">
                 </a>
             </div>
         }
@@ -229,11 +229,11 @@
                     <a asp-controller="Product" asp-action="Detail" asp-route-id="@pvm.Product.ProductId" class="product-card-link">
                         <div class="product-card">
                             <div class="product-image-wrapper">
-                                <img src="@Url.Content(pvm.Product.ImagePro ?? "~/imgages/placeholder.png")" class="product-image img-main" alt="@pvm.Product.NamePro">
+                                <img src="@Url.Content(Url.NormalizeImagePath(pvm.Product.ImagePro ?? "~/imgages/placeholder.png"))" class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                 @if (pvm.HoverImage != null)
                                 {
-                                    <img src="@Url.Content(pvm.HoverImage)" class="product-image img-hover" alt="@pvm.Product.NamePro">
+                                    <img src="@Url.Content(Url.NormalizeImagePath(pvm.HoverImage))" class="product-image img-hover" alt="@pvm.Product.NamePro">
                                 }
                             </div>
                             <div class="product-info">

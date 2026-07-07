@@ -67,14 +67,18 @@ namespace WebTrangSucNangCao.Controllers
             var allImages = database.ProductImages.Where(img => ProductIds.Contains(img.ProductId ?? 0)).ToList();
 
             var productViewModels = pagedProducts.Select(p => {
+                p.ImagePro = NormalizeImagePath(p.ImagePro);
                 var hoverImg = allImages.FirstOrDefault(img => img.ProductId == p.ProductId && img.ImagePath != p.ImagePro);
-                return new ProductHomeViewModel { Product = p, HoverImage = hoverImg?.ImagePath };
+                return new ProductHomeViewModel { Product = p, HoverImage = NormalizeImagePath(hoverImg?.ImagePath) };
             }).ToList();
+
+            var sliders = database.Sliders.ToList();
+            sliders.ForEach(s => s.ImagePath = NormalizeImagePath(s.ImagePath));
 
             // 5. Gửi dữ liệu ra View
             var viewModel = new HomeViewModel
             {
-                Sliders = database.Sliders.ToList(),
+                Sliders = sliders,
                 Products = productViewModels
             };
 
@@ -129,6 +133,8 @@ namespace WebTrangSucNangCao.Controllers
                             p.DecriptionPro.Contains(searchTerm))
                 .ToList();
 
+            products = products.Select(p => { p.ImagePro = NormalizeImagePath(p.ImagePro); return p; }).ToList();
+
             // 2. Gọi hàm lấy ảnh Hover cho danh sách vừa tìm được
             var viewModelList = GetProductsWithHover(products);
 
@@ -157,6 +163,7 @@ namespace WebTrangSucNangCao.Controllers
             var viewModelList = new List<ProductHomeViewModel>();
             foreach (var p in products)
             {
+                p.ImagePro = NormalizeImagePath(p.ImagePro);
                 // Tìm ảnh thứ 2 của sản phẩm 'p'
                 var hoverImg = allImages
                                 .Where(img => img.ProductId == p.ProductId)
@@ -166,7 +173,7 @@ namespace WebTrangSucNangCao.Controllers
                 viewModelList.Add(new ProductHomeViewModel
                 {
                     Product = p,
-                    HoverImage = hoverImg?.ImagePath
+                    HoverImage = NormalizeImagePath(hoverImg?.ImagePath)
                 });
             }
 
@@ -199,6 +206,7 @@ namespace WebTrangSucNangCao.Controllers
             var viewModelList = new List<ProductHomeViewModel>();
             foreach (var p in products)
             {
+                p.ImagePro = NormalizeImagePath(p.ImagePro);
                 // Tìm ảnh thứ 2 của sản phẩm 'p'
                 var hoverImg = allImages
                                 .Where(img => img.ProductId == p.ProductId)
@@ -210,11 +218,32 @@ namespace WebTrangSucNangCao.Controllers
                     Product = p,
                     // Nếu 'hoverImg' là null (vì sp chỉ có 1 ảnh)
                     // thì HoverImage sẽ là null
-                    HoverImage = hoverImg?.ImagePath
+                    HoverImage = NormalizeImagePath(hoverImg?.ImagePath)
                 });
             }
 
             return viewModelList;
+        }
+
+        private string? NormalizeImagePath(string? imagePath)
+        {
+            if (string.IsNullOrWhiteSpace(imagePath))
+            {
+                return null;
+            }
+
+            var normalized = imagePath.Trim();
+
+            if (normalized.StartsWith("~/Content/Img/Products/", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = "~/imgages/products/" + normalized["~/Content/Img/Products/".Length..];
+            }
+            else if (normalized.StartsWith("Content/Img/Products/", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = "~/imgages/products/" + normalized["Content/Img/Products/".Length..];
+            }
+
+            return normalized;
         }
     }
 }

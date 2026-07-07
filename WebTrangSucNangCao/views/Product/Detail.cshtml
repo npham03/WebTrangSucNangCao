@@ -200,10 +200,10 @@
             <div class="product-gallery">
                 <div class="gallery-thumbnails">
                     @foreach (var img in Model.Images)
-                    {<img src="@Url.Content(img.ImagePath)" onclick="changeMainImage(this)" />}
+                    {<img src="@Url.Content(Url.NormalizeImagePath(img.ImagePath))" onclick="changeMainImage(this)" />}
                 </div>
                 <div class="gallery-main-image">
-                    <img id="mainProductImage" src="@Url.Content(Model.Product.ImagePro)" />
+                    <img id="mainProductImage" src="@Url.Content(Url.NormalizeImagePath(Model.Product.ImagePro))" />
                 </div>
             </div>
         </div>

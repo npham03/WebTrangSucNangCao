@@ -24,12 +24,12 @@
                             <div class="product-card">
 
                                 <div class="product-image-wrapper">
-                                    <img src="@Url.Content(pvm.Product.ImagePro ?? "imgages/placeholder.png")"
+                                    <img src="@Url.Content(Url.NormalizeImagePath(pvm.Product.ImagePro ?? "~/imgages/placeholder.png"))"
                                          class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                     @if (pvm.HoverImage != null)
                                     {
-                                        <img src="@Url.Content(pvm.HoverImage)"
+                                        <img src="@Url.Content(Url.NormalizeImagePath(pvm.HoverImage))"
                                              class="product-image img-hover" alt="@pvm.Product.NamePro">
                                     }
                                 </div>
