@@ -25,7 +25,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 return BadRequest();
             }
 
-            Product product = _database.Products.Find(id);
+            Product? product = _database.Products.Find(id);
             if (product == null)
             {
                 // 3. Đổi HttpNotFound() thành NotFound()

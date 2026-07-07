@@ -24,7 +24,7 @@
 
     .gallery-thumbnails {
         display: flex;
-        flex-Direction: column;
+        flex-direction: column;
         gap: 5px;
     }
 
@@ -193,14 +193,22 @@
 
 </style>
 
+
+
 <div class="container product-detail-page">
     <div class="row">
 
         <div class="col-md-7">
             <div class="product-gallery">
                 <div class="gallery-thumbnails">
-                    @foreach (var img in Model.Images)
-                    {<img src="@Url.Content(Url.NormalizeImagePath(img.ImagePath))" onclick="changeMainImage(this)" />}
+                    @* SỬA LỖI XUỐNG DÒNG VÀ ĐỊNH DẠNG RAZOR Ở ĐÂY *@
+                    @if (Model.Images != null)
+                    {
+                        foreach (var img in Model.Images)
+                        {
+                            <img src="@Url.Content(Url.NormalizeImagePath(img.ImagePath))" onclick="changeMainImage(this)" />
+                        }
+                    }
                 </div>
                 <div class="gallery-main-image">
                     <img id="mainProductImage" src="@Url.Content(Url.NormalizeImagePath(Model.Product.ImagePro))" />
@@ -233,14 +241,17 @@
                     <div class="variant-selector">
                         <label>Chọn Size:</label>
                         <div class="variant-options" id="variantContainer">
-                            @foreach (var variant in Model.Variants)
+                            @if (Model.Variants != null)
                             {
-                                <button type="button"
-                                        class="variant-button"
-                                        data-variant-id="@variant.VariantId"
-                                        @(variant.Stock <= 0 ? "disabled" : "")>
-                                    @variant.VariantName
-                                </button>
+                                foreach (var variant in Model.Variants)
+                                {
+                                    <button type="button"
+                                            class="variant-button"
+                                            data-variant-id="@variant.VariantId"
+                                            @(variant.Stock <= 0 ? "disabled" : "")>
+                                        @variant.VariantName
+                                    </button>
+                                }
                             }
                         </div>
                     </div>
@@ -254,13 +265,30 @@
                 </form>
 
                 <form asp-controller="Cart" asp-action="BuyNow" method="post" class="cart-form">
-                    <input type="hidden" name="variantID" value="@defaultVariantId" class="selected-variant-input" />
+                    <input type="hidden" name="variantId" value="@defaultVariantId" class="selected-variant-input" />
                     <button type="submit" class="btn btn-buy-now">MUA NGAY</button>
-                </form>
+                </form> <button type="button" class="btn btn-ar-tryon" id="btnStartAR" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-camera me-2"></i> THỬ VÒNG TAY QUA CAMERA
+                </button>
+
+                <div id="arCameraContainer" style="display: none; position: relative; width: 100%; max-width: 500px; margin-top: 15px;">
+                    <video id="arVideo" style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);" autoplay playsinline></video>
+                    <canvas id="arCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1);"></canvas>
+                    
+                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+                        <button type="button" id="btnStopAR" class="btn btn-sm btn-danger" style="border-radius: 50%;">
+                            <i class="fas fa-times"></i> Tắt
+                        </button>
+                    </div>
+                    
+                    <div style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.5); padding: 5px;">
+                        Đưa cổ tay của bạn vào trước Camera để thử vòng tay
+                    </div>
+                </div>
 
                 <div class="product-description-short">
                     <h4>Mô tả</h4>
-                    <p>@Html.Raw(Model.Product.DecriptionPro.Replace("\n", "<br />"))</p>
+                    <p>@Html.Raw(Model.Product.DecriptionPro != null ? Model.Product.DecriptionPro.Replace("\n", "<br />") : "")</p>
                     <h4>Chất liệu</h4>
                     <p>@Model.Product.Material</p>
                 </div>
@@ -273,19 +301,22 @@
             <div class="related-products">
                 <h2 class="text-center product-title">CÁC SẢN PHẨM KHÁC</h2>
                 <div class="row gy-4">
-                    @foreach (var product in Model.RelatedProducts)
+                    @if (Model.RelatedProducts != null)
                     {
-                        <div class="col-md-3">
-                            <a href="@Url.Action("Detail", "Product", new { id = product.ProductId })" class="product-card-link">
-                                <div class="product-card">
-                                    <img src="@Url.Content(product.ImagePro ?? "~/Content/Img/placeholder.png")" class="product-image" alt="@product.NamePro">
-                                    <div class="product-info">
-                                        <h5 class="product-name">@product.NamePro</h5>
-                                        <p class="product-price">@String.Format("{0:N0} VNĐ", product.Price)</p>
+                        foreach (var product in Model.RelatedProducts)
+                        {
+                            <div class="col-md-3">
+                                <a href="@Url.Action("Detail", "Product", new { id = product.ProductId })" class="product-card-link">
+                                    <div class="product-card">
+                                        <img src="@Url.Content(product.ImagePro ?? "~/Content/Img/placeholder.png")" class="product-image" alt="@product.NamePro">
+                                        <div class="product-info">
+                                            <h5 class="product-name">@product.NamePro</h5>
+                                            <p class="product-price">@String.Format("{0:N0} VNĐ", product.Price)</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </a>
-                        </div>
+                                </a>
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -293,7 +324,7 @@
     </div>
 </div>
 
-@* === HTML MODAL THÔNG BÁO (Đặt ở đây là chuẩn) === *@
+@* === HTML MODAL THÔNG BÁO === *@
 <div class="modal fade" id="addedToCartModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 0; border: 1px solid #000;">
@@ -415,6 +446,102 @@
                     });
                 }
             });
+        });
+    </script>
+
+    @* SỬA LỖI: BIẾN HAI DẤU @@ ĐỂ KHÔNG BỊ LỖI LIÊN KẾT RAZOR C# *@
+    <script src="https://cdn.jsdelivr.net/npm/@@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script>
+        const videoElement = document.getElementById('arVideo');
+        const canvasElement = document.getElementById('arCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const btnStartAR = document.getElementById('btnStartAR');
+        const btnStopAR = document.getElementById('btnStopAR');
+        const arContainer = document.getElementById('arCameraContainer');
+
+        const braceletImage = new Image();
+        braceletImage.src = "@Url.Content(Url.NormalizeImagePath(Model.Product.ImagePro))"; 
+
+        let cameraActive = null;
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onARResults);
+
+        function onARResults(results) {
+            if (canvasElement.width !== videoElement.videoWidth) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+            }
+
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                const wrist = landmarks[0];
+                const thumbBase = landmarks[1];
+                const pinkyBase = landmarks[17];
+
+                const wristX = wrist.x * canvasElement.width;
+                const wristY = wrist.y * canvasElement.height;
+
+                const tX = thumbBase.x * canvasElement.width;
+                const tY = thumbBase.y * canvasElement.height;
+                const pX = pinkyBase.x * canvasElement.width;
+                const pY = pinkyBase.y * canvasElement.height;
+
+                const handWidth = Math.sqrt(Math.pow(pX - tX, 2) + Math.pow(pY - tY, 2));
+                const braceletWidth = handWidth * 1.6; 
+                const braceletHeight = braceletWidth * (braceletImage.height / braceletImage.width || 1);
+
+                const angle = Math.atan2(pY - tY, pX - tX);
+
+                canvasCtx.save();
+                canvasCtx.translate(wristX, wristY + (braceletHeight * 0.15)); 
+                canvasCtx.rotate(angle);
+                
+                canvasCtx.drawImage(braceletImage, -braceletWidth / 2, -braceletHeight / 2, braceletWidth, braceletHeight);
+                canvasCtx.restore();
+            }
+        }
+
+        btnStartAR.addEventListener('click', async () => {
+            arContainer.style.display = 'block';
+            btnStartAR.style.display = 'none';
+
+            if (!cameraActive) {
+                cameraActive = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await hands.send({ image: videoElement });
+                    },
+                    width: 640,
+                    height: 480
+                });
+            }
+            cameraActive.start().catch(err => {
+                alert("Không thể truy cập camera. Vui lòng cấp quyền camera cho trình duyệt!");
+                console.error(err);
+            });
+        });
+
+        btnStopAR.addEventListener('click', () => {
+            if (cameraActive) {
+                cameraActive.stop();
+            }
+            arContainer.style.display = 'none';
+            btnStartAR.style.display = 'block';
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         });
     </script>
 }
