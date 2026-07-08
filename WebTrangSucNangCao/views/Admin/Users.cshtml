@@ -1,38 +1,50 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.ApplicationUser>
+@model IEnumerable<WebTrangSucNangCao.Models.ApplicationUser>
 @{
-    ViewData["Title"] = "Quản lý Người dùng";
-    Layout = "_Layout";
+    ViewData["Title"] = "Quản lý Khách hàng";
+    Layout = "_AdminLayout";
 }
 
-<div class="container mt-5">
-    <h2>Quản lý Người dùng</h2>
+<div class="arch-card">
+    <div class="arch-card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-5 fw-bold">Quản lý Khách hàng (Users)</span>
+        </div>
+        <span class="badge bg-dark px-3 py-2">Tổng: @Model.Count() khách hàng</span>
+    </div>
 
-    <table class="table table-bordered table-striped align-middle mt-4">
-        <thead class="table-dark">
-            <tr>
-                <th>Email (Username)</th>
-                <th>Họ và Tên</th>
-                <th>SĐT</th>
-                <th>Địa chỉ</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.Email</td>
-                    <td>@(item.Name) @(item.LastName)</td>
-                    <td>@item.PhoneNumber</td>
-                    <td>@item.Address</td>
-                    <td class="text-center">
-                        <a asp-controller="Admin" asp-action="EditUser" asp-route-id="@item.Id"
-                           class="btn btn-warning btn-sm">Sửa</a>
-                        <a asp-controller="Admin" asp-action="DeleteUser" asp-route-id="@item.Id"
-                           class="btn btn-danger btn-sm" onclick="return confirm('Chắc chắn xóa user này?')">Xóa</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Email (Tài khoản)</th>
+                        <th>Họ và Tên</th>
+                        <th>SĐT</th>
+                        <th>Địa chỉ</th>
+                        <th style="width: 150px;" class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold text-dark">@item.Email</td>
+                            <td>@(item.Name) @(item.LastName)</td>
+                            <td>@(string.IsNullOrEmpty(item.PhoneNumber) ? "--" : item.PhoneNumber)</td>
+                            <td class="small text-muted" style="max-width: 250px;">@item.Address</td>
+                            <td class="text-center">
+                                <a asp-controller="Admin" asp-action="EditUser" asp-route-id="@item.Id"
+                                   class="btn btn-outline-dark btn-sm rounded-pill px-3">Sửa</a>
+                                @if (item.Email != "admin@rosaria.com")
+                                {
+                                    <a asp-controller="Admin" asp-action="DeleteUser" asp-route-id="@item.Id"
+                                       class="btn btn-dark btn-sm rounded-pill px-3 ms-1" onclick="return confirm('Chắc chắn xóa khách hàng này?')">Xóa</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>

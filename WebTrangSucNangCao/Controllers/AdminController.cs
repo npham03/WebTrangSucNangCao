@@ -310,7 +310,9 @@ namespace WebTrangSucNangCao.Controllers
         // XEM ĐƠN HÀNG (GET)
         public ActionResult Orders(string statusFilter)
         {
-            IQueryable<OrderPro> ordersQuery = _database.OrderPros.Include(o => o.IdcusNavigation);
+            IQueryable<OrderPro> ordersQuery = _database.OrderPros
+                .Include(o => o.IdcusNavigation)
+                .Include(o => o.OrderDetails);
 
             if (statusFilter == "Hoàn tất")
             {
@@ -330,6 +332,91 @@ namespace WebTrangSucNangCao.Controllers
 
             var orders = ordersQuery.OrderByDescending(o => o.DateOrder).ToList();
             return View(orders);
+        }
+
+        // CẬP NHẬT TRẠNG THÁI NHANH QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> UpdateOrderStatus(int id, string status)
+        {
+            var dbOrder = await _database.OrderPros.FindAsync(id);
+            if (dbOrder == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy đơn hàng!" });
+            }
+
+            dbOrder.Status = status;
+            await _database.SaveChangesAsync();
+
+            return Json(new { success = true, newStatus = status });
+        }
+
+        // CẬP NHẬT TỒN KHO NHANH QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> QuickUpdateStock(int variantId, int newStock)
+        {
+            var variant = await _database.ProductVariants.FindAsync(variantId);
+            if (variant == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy phiên bản sản phẩm!" });
+            }
+
+            variant.Stock = newStock;
+            await _database.SaveChangesAsync();
+
+            return Json(new { success = true, variantId = variantId, newStock = newStock });
+        }
+
+        // LẤY DANH SÁCH CÁC SIZE CỦA SẢN PHẨM QUA AJAX (GET)
+        [HttpGet]
+        public async Task<IActionResult> GetProductVariants(int productId)
+        {
+            var product = await _database.Products
+                .Include(p => p.ProductVariants)
+                .FirstOrDefaultAsync(p => p.ProductId == productId);
+
+            if (product == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy sản phẩm!" });
+            }
+
+            var variants = product.ProductVariants.OrderBy(v => v.VariantId).Select(v => new
+            {
+                variantId = v.VariantId,
+                variantName = v.VariantName,
+                stock = v.Stock ?? 0
+            }).ToList();
+
+            return Json(new
+            {
+                success = true,
+                productId = product.ProductId,
+                productName = product.NamePro,
+                variants = variants
+            });
+        }
+
+        // CỘNG/TRỪ THÊM SỐ LƯỢNG CHO TỪNG SIZE QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> AddVariantStock(int variantId, int delta)
+        {
+            var variant = await _database.ProductVariants.FindAsync(variantId);
+            if (variant == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy size sản phẩm!" });
+            }
+
+            int current = variant.Stock ?? 0;
+            int updated = Math.Max(0, current + delta);
+            variant.Stock = updated;
+            await _database.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                variantId = variant.VariantId,
+                newStock = updated,
+                delta = delta
+            });
         }
 
         // SỬA ĐƠN HÀNG (GET)

@@ -1,76 +1,155 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.OrderPro>
+@model IEnumerable<WebTrangSucNangCao.Models.OrderPro>
 @{
     ViewData["Title"] = "Quản lý Đơn hàng";
-    Layout = "_Layout";
+    Layout = "_AdminLayout";
     var currentFilter = ViewBag.CurrentFilter as string;
 }
 
-<div class="container mt-5">
-    <h2>Quản lý Đơn hàng</h2>
+<div class="arch-card">
+    <div class="arch-card-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-shopping-bag text-warning fs-5"></i>
+            <span class="fs-5">Quản lý Đơn hàng</span>
+        </div>
+        <div>
+            <span class="badge bg-dark px-3 py-2">Tổng: @Model.Count() đơn</span>
+        </div>
+    </div>
 
-    <ul class="nav nav-tabs mt-3 mb-3">
-        <li class="nav-item">
-            <a class="nav-link @(string.IsNullOrEmpty(currentFilter) || currentFilter == "Tất cả" ? "active" : "")"
-               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Tất cả">Tất cả</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(currentFilter == "Đang xử lý" ? "active" : "")"
-               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang xử lý">Đang xử lý</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(currentFilter == "Đang giao" ? "active" : "")"
-               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang giao">Đang giao</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(currentFilter == "Hoàn tất" ? "active" : "")"
-               asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Hoàn tất">Hoàn tất</a>
-        </li>
-    </ul>
+    <div class="p-4">
+        <!-- Filter Tabs -->
+        <ul class="nav nav-pills mb-4 gap-2">
+            <li class="nav-item">
+                <a class="nav-link @(string.IsNullOrEmpty(currentFilter) || currentFilter == "Tất cả" ? "active bg-dark" : "text-dark border")"
+                   asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Tất cả">Tất cả</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "Đang xử lý" ? "active bg-dark" : "text-dark border")"
+                   asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang xử lý">Đang xử lý</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "Đang giao" ? "active bg-dark" : "text-dark border")"
+                   asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Đang giao">Đang giao</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "Hoàn tất" ? "active bg-dark" : "text-dark border")"
+                   asp-controller="Admin" asp-action="Orders" asp-route-statusFilter="Hoàn tất">Hoàn tất</a>
+            </li>
+        </ul>
 
-    <table class="table table-bordered table-striped align-middle">
-        <thead class="table-dark">
-            <tr>
-                <th>Mã ĐH</th>
-                <th>Tên Khách Hàng</th>
-                <th>Ngày Đặt</th>
-                <th>Địa chỉ Giao</th>
-                <th>Trạng Thái</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.Id</td>
-                    <td>@(item.IdcusNavigation != null ? item.IdcusNavigation.NameCus : "Khách vãng lai")</td>
-                    <td>@(item.DateOrder.HasValue ? item.DateOrder.Value.ToString("dd/MM/yyyy") : "")</td>
-                    <td>@item.AddressDeliverry</td>
-                    <td>
-                        @if (item.Status == "Hoàn tất")
-                        {
-                            <span class="badge bg-success">@item.Status</span>
-                        }
-                        else if (item.Status == "Đang xử lý")
-                        {
-                            <span class="badge bg-danger">@item.Status</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">@item.Status</span>
-                        }
-                    </td>
-                    <td>
-                        @if (item.Status != "Hoàn tất")
-                        {
-                            <a asp-controller="Admin" asp-action="EditOrder" asp-route-id="@item.Id"
-                               class="btn btn-outline-dark btn-sm" style="background-color: white; border-radius: 4px; padding: 5px 10px;">Cập nhật trạng thái</a>
-                        }
-                        <a asp-controller="Admin" asp-action="OrderDetails" asp-route-id="@item.Id"
-                           class="btn btn-dark btn-sm ms-1" style="border-radius: 4px; padding: 5px 10px;">Chi tiết</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        <!-- Orders Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 90px;">Mã ĐH</th>
+                        <th>Khách Hàng</th>
+                        <th>Ngày Đặt</th>
+                        <th>Địa Chỉ Giao</th>
+                        <th>Tổng Tiền</th>
+                        <th style="width: 190px;">Trạng Thái (1-Click)</th>
+                        <th style="width: 110px;" class="text-center">Chi Tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        decimal totalPrice = item.OrderDetails != null
+                            ? item.OrderDetails.Sum(d => (decimal)(d.Quantity ?? 0) * (decimal)(d.UnitPrice ?? 0))
+                            : 0;
+
+                        string badgeClass = "btn-secondary";
+                        if (item.Status == "Hoàn tất") { badgeClass = "btn-success"; }
+                        else if (item.Status == "Đang xử lý") { badgeClass = "btn-warning text-dark"; }
+                        else if (item.Status == "Đang giao") { badgeClass = "btn-info text-dark"; }
+                        else if (item.Status == "Đã hủy") { badgeClass = "btn-danger"; }
+
+                        <tr id="order-row-@item.Id">
+                            <td class="fw-bold text-dark">#@item.Id</td>
+                            <td>
+                                <div class="fw-semibold">@(item.IdcusNavigation != null ? item.IdcusNavigation.NameCus : "Khách vãng lai")</div>
+                                <small class="text-muted">@(item.IdcusNavigation?.PhoneCus ?? "")</small>
+                            </td>
+                            <td>@(item.DateOrder.HasValue ? item.DateOrder.Value.ToString("dd/MM/yyyy") : "--")</td>
+                            <td class="small text-muted" style="max-width: 200px;">@item.AddressDeliverry</td>
+                            <td class="fw-bold text-danger">@String.Format("{0:N0} VNĐ", totalPrice)</td>
+                            <td>
+                                <!-- 1-Click AJAX Status Dropdown -->
+                                <div class="dropdown">
+                                    <button class="btn @badgeClass btn-sm dropdown-toggle fw-semibold w-100 d-flex justify-content-between align-items-center"
+                                            type="button" id="statusBtn_@item.Id" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="status-text">@item.Status</span>
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="statusBtn_@item.Id">
+                                        <li><a class="dropdown-item status-option" href="javascript:void(0);" data-id="@item.Id" data-status="Đang xử lý">Đang xử lý</a></li>
+                                        <li><a class="dropdown-item status-option" href="javascript:void(0);" data-id="@item.Id" data-status="Đang giao">Đang giao</a></li>
+                                        <li><a class="dropdown-item status-option" href="javascript:void(0);" data-id="@item.Id" data-status="Hoàn tất">Hoàn tất</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item status-option text-danger" href="javascript:void(0);" data-id="@item.Id" data-status="Đã hủy">Đã hủy</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <a asp-controller="Admin" asp-action="OrderDetails" asp-route-id="@item.Id"
+                                   class="btn btn-outline-dark btn-sm rounded-pill px-3">Xem</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.status-option').on('click', function (e) {
+                e.preventDefault();
+                const orderId = $(this).data('id');
+                const newStatus = $(this).data('status');
+                const btnEl = $('#statusBtn_' + orderId);
+
+                $.ajax({
+                    url: '@Url.Action("UpdateOrderStatus", "Admin")',
+                    type: 'POST',
+                    data: { id: orderId, status: newStatus },
+                    success: function (res) {
+                        if (res.success) {
+                            // Cập nhật text trên button dropdown
+                            btnEl.find('.status-text').text(newStatus);
+
+                            // Đổi màu badge phù hợp
+                            btnEl.removeClass('btn-success btn-warning btn-info btn-danger btn-secondary text-dark');
+                            if (newStatus === 'Hoàn tất') {
+                                btnEl.addClass('btn-success');
+                            } else if (newStatus === 'Đang xử lý') {
+                                btnEl.addClass('btn-warning text-dark');
+                            } else if (newStatus === 'Đang giao') {
+                                btnEl.addClass('btn-info text-dark');
+                            } else if (newStatus === 'Đã hủy') {
+                                btnEl.addClass('btn-danger');
+                            } else {
+                                btnEl.addClass('btn-secondary');
+                            }
+
+                            // Toast notification
+                            if (typeof showAdminToast === 'function') {
+                                showAdminToast(`Đã cập nhật đơn hàng #${orderId} sang: ${newStatus}`, true);
+                            }
+                        } else {
+                            if (typeof showAdminToast === 'function') {
+                                showAdminToast(res.message || 'Lỗi cập nhật trạng thái', false);
+                            }
+                        }
+                    },
+                    error: function () {
+                        if (typeof showAdminToast === 'function') {
+                            showAdminToast('Lỗi kết nối máy chủ!', false);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+}
