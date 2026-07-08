@@ -15,6 +15,9 @@
     padding: 0 30px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     flex-shrink: 0; /* Quan trọng cho sticky footer */
+    position: sticky;
+    top: 0;
+    z-index: 1050;
 }
 
 /* PHẦN 1.1: LOGO + TÊN THƯƠNG HIỆU */
