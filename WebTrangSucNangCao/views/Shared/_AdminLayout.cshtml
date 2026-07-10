@@ -1,0 +1,419 @@
+@using Microsoft.AspNetCore.Identity
+@using WebTrangSucNangCao.Models  
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Rosaria Architect UI Admin</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- Google Fonts Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Client NavBar CSS -->
+    <link rel="stylesheet" href="~/css/NavBar.css" asp-append-version="true" />
+    <style>
+        :root {
+            --admin-sidebar-width: 260px;
+            --admin-header-height: 72px;
+            --admin-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--admin-bg);
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* Đảm bảo navbar của User ở trang Admin luôn cố định phía trên */
+        .navbar {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            width: 100%;
+        }
+
+        /* Fixed Left Sidebar - Clean White Style */
+        .app-sidebar {
+            position: fixed;
+            top: var(--admin-header-height);
+            left: 0;
+            bottom: 0;
+            width: var(--admin-sidebar-width);
+            background: #ffffff;
+            color: #1e293b;
+            z-index: 1030;
+            overflow-y: auto;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 1.5rem 0.75rem;
+            margin: 0;
+        }
+
+        .sidebar-menu-header {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            padding: 0.5rem 1rem;
+            margin-top: 1rem;
+            font-weight: 700;
+        }
+
+        .sidebar-item {
+            margin-bottom: 0.35rem;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #334155;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .sidebar-link:hover, .sidebar-link.active {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-left: 4px solid #111827;
+        }
+
+        /* Main Content Area */
+        .app-main {
+            margin-left: var(--admin-sidebar-width);
+            margin-top: var(--admin-header-height);
+            padding: 2rem;
+            min-height: calc(100vh - var(--admin-header-height));
+        }
+
+        /* Architect UI Cards */
+        .arch-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .arch-card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            top: 85px;
+            right: 25px;
+            z-index: 9999;
+        }
+
+        /* Stepper input styles in Modal */
+        .stepper-group .btn {
+            width: 38px;
+            font-weight: bold;
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Top Header giống y hệt Navbar trang User -->
+    <nav class="navbar">
+        <a asp-controller="Home" asp-action="Index" class="brand">
+            <img src="~/images/rosa4.png" alt="Rosaria Logo" class="logo">
+            <span class="brand-name">ROSARIA</span>
+        </a>
+
+        <ul class="nav-links">
+            <li><a asp-controller="Home" asp-action="Rings">RINGS</a></li>
+            <li><a asp-controller="Home" asp-action="Bracelets">BRACELETS</a></li>
+            <li><a asp-controller="Home" asp-action="Necklaces">NECKLACES</a></li>
+            <li><a asp-controller="Home" asp-action="Earrings">EARRINGS</a></li>
+        </ul>
+
+        <div class="nav-right">
+            <form asp-controller="Home" asp-action="Search" method="get" class="search-box">
+                <input type="text" name="searchTerm" placeholder="Search...">
+                <button type="submit" class="search-button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <div class="user-menu-container">
+                    <span class="user-icon-nav">
+                        <img src="~/images/dangnhap.png" class="icon" alt="User Icon" />
+                    </span>
+                    <div class="user-dropdown">
+                        <div class="username-display">
+                            Hi, <strong>@User.Identity.Name</strong>
+                        </div>
+                        <hr style="margin: 8px 0;">
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="Admin" asp-action="Index" class="login-register-link">Trang Quản Trị (Dashboard)</a>
+                            <hr style="margin: 8px 0;">
+                        }
+
+                        <form asp-controller="Account" asp-action="LogOff" method="post" id="logoutFormAdmin" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <a href="javascript:document.getElementById('logoutFormAdmin').submit()" class="logout-link">Logout</a>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <a asp-controller="Cart" asp-action="Index">
+                <i>
+                    <img src="~/images/giohang2.png" class="icon" alt="Cart Icon" />
+                </i>
+            </a>
+
+            <div class="lang-switch">
+                <span>Vi</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Fixed Left Sidebar (White style, No icons) -->
+    <aside class="app-sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-header">DASHBOARD</li>
+            <li class="sidebar-item">
+                <a asp-controller="Admin" asp-action="Index" class="sidebar-link">
+                    <span>Tổng Quan</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-header">QUẢN LÝ CỬA HÀNG</li>
+            <li class="sidebar-item">
+                <a asp-controller="Admin" asp-action="Orders" class="sidebar-link">
+                    <span>Đơn Hàng (Orders)</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a asp-controller="Admin" asp-action="ProductList" class="sidebar-link">
+                    <span>Sản Phẩm (Products)</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a asp-controller="Admin" asp-action="Users" class="sidebar-link">
+                    <span>Khách Hàng (Users)</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+        @RenderBody()
+    </main>
+
+    <!-- MULTI-SIZE QUICK STOCK UPDATE MODAL (Cập nhật cho tất cả size, có nút +/-, có nút bấm từng size) -->
+    <div class="modal fade" id="multiSizeStockModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-boxes me-2 text-warning"></i>Cập Nhật Tồn Kho Từng Size
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase fw-bold">Sản Phẩm:</small>
+                        <h5 class="fw-bold text-dark mt-1" id="multiModalProductName">--</h5>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th style="width: 140px;">Size / Phiên Bản</th>
+                                    <th style="width: 160px;">Tồn Kho Hiện Tại</th>
+                                    <th style="width: 210px;">Thêm / Giảm Số Lượng (+/-)</th>
+                                    <th>Thao Tác Từng Size</th>
+                                </tr>
+                            </thead>
+                            <tbody id="multiModalVariantsBody">
+                                <!-- Ajax loads rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-dark px-4 fw-bold" data-bs-dismiss="modal">Hoàn tất</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Alert Container -->
+    <div class="toast-container">
+        <div id="adminToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2" id="toastMessage">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Thao tác thành công!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery 3.7.1 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap 5 Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Helper Script for Toast & Multi-Size Stock Modal -->
+    <script>
+        function showAdminToast(message, isSuccess = true) {
+            const toastEl = document.getElementById('adminToast');
+            const toastMsg = document.getElementById('toastMessage');
+            toastEl.className = `toast align-items-center text-white ${isSuccess ? 'bg-dark' : 'bg-danger'} border-0 shadow-lg`;
+            toastMsg.innerHTML = `<i class="fas ${isSuccess ? 'fa-check-circle text-success' : 'fa-exclamation-circle'} me-2"></i><span>${message}</span>`;
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            toast.show();
+        }
+
+        // Global handler cho nút mở modal chọn size sản phẩm
+        function openMultiSizeModal(productId) {
+            $.ajax({
+                url: '@Url.Action("GetProductVariants", "Admin")',
+                type: 'GET',
+                data: { productId: productId },
+                success: function (res) {
+                    if (res.success) {
+                        $('#multiModalProductName').text(res.productName);
+                        const tbody = $('#multiModalVariantsBody');
+                        tbody.empty();
+
+                        if (res.variants && res.variants.length > 0) {
+                            res.variants.forEach(function (v) {
+                                const badgeClass = v.stock <= 5 ? 'bg-danger' : 'bg-success';
+                                const rowHtml = `
+                                    <tr id="modal-variant-row-${v.variantId}">
+                                        <td class="text-center fw-bold text-dark">${v.variantName}</td>
+                                        <td class="text-center">
+                                            <span class="badge ${badgeClass} fs-6 px-3 py-2" id="modal-curr-stock-${v.variantId}">
+                                                ${v.stock}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="input-group stepper-group justify-content-center m-auto" style="max-width: 170px;">
+                                                <button class="btn btn-outline-secondary step-dec-btn" type="button" data-id="${v.variantId}">-</button>
+                                                <input type="number" id="delta-input-${v.variantId}" class="form-control text-center fw-bold" value="1" />
+                                                <button class="btn btn-outline-secondary step-inc-btn" type="button" data-id="${v.variantId}">+</button>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-dark btn-sm fw-bold px-3 update-size-btn"
+                                                    data-variant-id="${v.variantId}" data-variant-name="${v.variantName}">
+                                                + Nhập Kho Size Này
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                                tbody.append(rowHtml);
+                            });
+                        } else {
+                            tbody.append('<tr><td colspan="4" class="text-center text-muted py-3">Sản phẩm này chưa có phiên bản size nào.</td></tr>');
+                        }
+
+                        const modalEl = document.getElementById('multiSizeStockModal');
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                    } else {
+                        showAdminToast(res.message || 'Lỗi tải danh sách size', false);
+                    }
+                },
+                error: function () {
+                    showAdminToast('Lỗi kết nối tới máy chủ!', false);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            // Nút tăng giảm stepper (+/-)
+            $(document).on('click', '.step-inc-btn', function () {
+                const id = $(this).data('id');
+                const inputEl = $('#delta-input-' + id);
+                let val = parseInt(inputEl.val(), 10) || 0;
+                inputEl.val(val + 1);
+            });
+
+            $(document).on('click', '.step-dec-btn', function () {
+                const id = $(this).data('id');
+                const inputEl = $('#delta-input-' + id);
+                let val = parseInt(inputEl.val(), 10) || 0;
+                inputEl.val(val - 1);
+            });
+
+            // Nút cập nhật từng size
+            $(document).on('click', '.update-size-btn', function () {
+                const variantId = $(this).data('variant-id');
+                const variantName = $(this).data('variant-name');
+                const delta = parseInt($('#delta-input-' + variantId).val(), 10) || 0;
+
+                $.ajax({
+                    url: '@Url.Action("AddVariantStock", "Admin")',
+                    type: 'POST',
+                    data: { variantId: variantId, delta: delta },
+                    success: function (res) {
+                        if (res.success) {
+                            // Cập nhật badge trong modal
+                            const badgeEl = $('#modal-curr-stock-' + variantId);
+                            badgeEl.text(res.newStock);
+                            if (res.newStock <= 5) {
+                                badgeEl.removeClass('bg-success').addClass('bg-danger');
+                            } else {
+                                badgeEl.removeClass('bg-danger').addClass('bg-success');
+                            }
+
+                            // Cập nhật trên bảng Dashboard hoặc ProductList nếu có
+                            const pageStockBadge = $('#stock-val-' + variantId);
+                            if (pageStockBadge.length > 0) {
+                                pageStockBadge.text(res.newStock);
+                                if (res.newStock <= 5) {
+                                    pageStockBadge.removeClass('bg-success').addClass('bg-danger');
+                                } else {
+                                    pageStockBadge.removeClass('bg-danger').addClass('bg-success');
+                                }
+                            }
+
+                            showAdminToast(`Đã thêm (${res.delta >= 0 ? '+' : ''}${res.delta}) vào ${variantName} -> Tồn kho mới: ${res.newStock}`, true);
+                        } else {
+                            showAdminToast(res.message || 'Lỗi cập nhật số lượng', false);
+                        }
+                    },
+                    error: function () {
+                        showAdminToast('Lỗi kết nối máy chủ!', false);
+                    }
+                });
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

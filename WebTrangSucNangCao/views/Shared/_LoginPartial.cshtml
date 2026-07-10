@@ -1,11 +1,11 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 
 @if (SignInManager.IsSignedIn(User))
 {
     <div class="user-menu-container">
         <span class="user-icon-nav">
-            <img src="~/imgages/imagesdangnhap.png" class="icon" />
+            <img src="~/images/dangnhap.png" class="icon" />
         </span>
         <div class="user-dropdown">
             <div class="username-display">
@@ -23,7 +23,7 @@ else
 {
     <div class="user-menu-container">
         <span class="user-icon-nav">
-            <img src="~/imgages/dangnhap.png" class="icon" />
+            <img src="~/images/dangnhap.png" class="icon" />
         </span>
         <div class="user-dropdown">
             <a asp-controller="Account" asp-action="Login" class="login-register-link">Đăng nhập</a>

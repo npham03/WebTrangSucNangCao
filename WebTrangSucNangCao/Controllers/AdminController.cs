@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -78,14 +78,14 @@ namespace WebTrangSucNangCao.Controllers
             if (ImageFile != null && ImageFile.Length > 0)
             {
                 var fileName = Path.GetFileName(ImageFile.FileName);
-                var path = Path.Combine(_env.WebRootPath, "Content", "Img", "Banners", fileName);
+                var path = Path.Combine(_env.WebRootPath, "images", "banners", fileName);
 
                 using (var stream = new FileStream(path, FileMode.Create))
                 {
                     await ImageFile.CopyToAsync(stream);
                 }
 
-                newSlider.ImagePath = "~/imagesBanners/" + fileName;
+                newSlider.ImagePath = "~/images/banners/" + fileName;
 
                 _database.Sliders.Add(newSlider);
                 await _database.SaveChangesAsync();
@@ -120,7 +120,7 @@ namespace WebTrangSucNangCao.Controllers
         public ActionResult AddProduct()
         {
             var categories = _database.Categories.ToList();
-            ViewBag.CategoryList = new SelectList(categories, "IDCate", "NameCate");
+            ViewBag.CategoryList = new SelectList(categories, "Idcate", "NameCate");
             return View();
         }
 
@@ -128,7 +128,7 @@ namespace WebTrangSucNangCao.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddProduct(Product p, IEnumerable<IFormFile> ImageFiles, int? InitialStock)
         {
-            ViewBag.CategoryList = new SelectList(_database.Categories.ToList(), "IDCate", "NameCate");
+            ViewBag.CategoryList = new SelectList(_database.Categories.ToList(), "Idcate", "NameCate");
 
             try
             {
@@ -143,14 +143,14 @@ namespace WebTrangSucNangCao.Controllers
                     // LẤY ẢNH BÌA
                     var firstFile = ImageFiles.First();
                     var firstFileName = Path.GetFileName(firstFile.FileName);
-                    var firstFilePath = Path.Combine(_env.WebRootPath, "Content", "Img", "Products", firstFileName);
+                    var firstFilePath = Path.Combine(_env.WebRootPath, "images", "products", firstFileName);
 
                     using (var stream = new FileStream(firstFilePath, FileMode.Create))
                     {
                         await firstFile.CopyToAsync(stream);
                     }
 
-                    p.ImagePro = "~/imagesProducts/" + firstFileName;
+                    p.ImagePro = "~/images/products/" + firstFileName;
 
                     _database.Products.Add(p);
                     await _database.SaveChangesAsync();
@@ -173,14 +173,14 @@ namespace WebTrangSucNangCao.Controllers
                         if (file != null && file.Length > 0)
                         {
                             var fileName = Path.GetFileName(file.FileName);
-                            var path = Path.Combine(_env.WebRootPath, "Content", "Img", "Products", fileName);
+                            var path = Path.Combine(_env.WebRootPath, "images", "products", fileName);
 
                             using (var stream = new FileStream(path, FileMode.Create))
                             {
                                 await file.CopyToAsync(stream);
                             }
 
-                            var imagePathDb = "~/imagesProducts/" + fileName;
+                            var imagePathDb = "~/images/products/" + fileName;
 
                             ProductImage galleryImage = new ProductImage
                             {
@@ -269,7 +269,7 @@ namespace WebTrangSucNangCao.Controllers
                 Images = images,
                 Variants = variants,
                 // Chú ý: Cột lưu trữ ID category cũ của bạn tên là Category
-                CategoryList = new SelectList(categories, "IDCate", "NameCate", product.Category)
+                CategoryList = new SelectList(categories, "Idcate", "NameCate", product.Category)
             };
 
             return View(viewModel);
@@ -302,7 +302,7 @@ namespace WebTrangSucNangCao.Controllers
 
             viewModel.Images = _database.ProductImages.Where(img => img.ProductId == productFromForm.ProductId).ToList();
             viewModel.Variants = _database.ProductVariants.Where(v => v.ProductId == productFromForm.ProductId).ToList();
-            viewModel.CategoryList = new SelectList(_database.Categories.ToList(), "IDCate", "NameCate", productFromForm.Category);
+            viewModel.CategoryList = new SelectList(_database.Categories.ToList(), "Idcate", "NameCate", productFromForm.Category);
 
             return View(viewModel);
         }
@@ -310,7 +310,9 @@ namespace WebTrangSucNangCao.Controllers
         // XEM ĐƠN HÀNG (GET)
         public ActionResult Orders(string statusFilter)
         {
-            IQueryable<OrderPro> ordersQuery = _database.OrderPros.Include(o => o.IdcusNavigation);
+            IQueryable<OrderPro> ordersQuery = _database.OrderPros
+                .Include(o => o.IdcusNavigation)
+                .Include(o => o.OrderDetails);
 
             if (statusFilter == "Hoàn tất")
             {
@@ -330,6 +332,91 @@ namespace WebTrangSucNangCao.Controllers
 
             var orders = ordersQuery.OrderByDescending(o => o.DateOrder).ToList();
             return View(orders);
+        }
+
+        // CẬP NHẬT TRẠNG THÁI NHANH QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> UpdateOrderStatus(int id, string status)
+        {
+            var dbOrder = await _database.OrderPros.FindAsync(id);
+            if (dbOrder == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy đơn hàng!" });
+            }
+
+            dbOrder.Status = status;
+            await _database.SaveChangesAsync();
+
+            return Json(new { success = true, newStatus = status });
+        }
+
+        // CẬP NHẬT TỒN KHO NHANH QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> QuickUpdateStock(int variantId, int newStock)
+        {
+            var variant = await _database.ProductVariants.FindAsync(variantId);
+            if (variant == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy phiên bản sản phẩm!" });
+            }
+
+            variant.Stock = newStock;
+            await _database.SaveChangesAsync();
+
+            return Json(new { success = true, variantId = variantId, newStock = newStock });
+        }
+
+        // LẤY DANH SÁCH CÁC SIZE CỦA SẢN PHẨM QUA AJAX (GET)
+        [HttpGet]
+        public async Task<IActionResult> GetProductVariants(int productId)
+        {
+            var product = await _database.Products
+                .Include(p => p.ProductVariants)
+                .FirstOrDefaultAsync(p => p.ProductId == productId);
+
+            if (product == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy sản phẩm!" });
+            }
+
+            var variants = product.ProductVariants.OrderBy(v => v.VariantId).Select(v => new
+            {
+                variantId = v.VariantId,
+                variantName = v.VariantName,
+                stock = v.Stock ?? 0
+            }).ToList();
+
+            return Json(new
+            {
+                success = true,
+                productId = product.ProductId,
+                productName = product.NamePro,
+                variants = variants
+            });
+        }
+
+        // CỘNG/TRỪ THÊM SỐ LƯỢNG CHO TỪNG SIZE QUA AJAX (POST)
+        [HttpPost]
+        public async Task<IActionResult> AddVariantStock(int variantId, int delta)
+        {
+            var variant = await _database.ProductVariants.FindAsync(variantId);
+            if (variant == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy size sản phẩm!" });
+            }
+
+            int current = variant.Stock ?? 0;
+            int updated = Math.Max(0, current + delta);
+            variant.Stock = updated;
+            await _database.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                variantId = variant.VariantId,
+                newStock = updated,
+                delta = delta
+            });
         }
 
         // SỬA ĐƠN HÀNG (GET)
@@ -373,6 +460,65 @@ namespace WebTrangSucNangCao.Controllers
         {
             var users = _database.Users.ToList();
             return View(users);
+        }
+
+        // SỬA USER (GET)
+        public ActionResult EditUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest();
+            }
+
+            var user = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return View(user);
+        }
+
+        // SỬA USER (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditUser(string id, string? Name, string? LastName, string? PhoneNumber, string? Address)
+        {
+            var dbUser = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (dbUser == null)
+            {
+                return NotFound();
+            }
+
+            dbUser.Name = Name;
+            dbUser.LastName = LastName;
+            dbUser.PhoneNumber = PhoneNumber;
+            dbUser.Address = Address;
+
+            _database.SaveChanges();
+
+            return RedirectToAction("Users");
+        }
+
+        // XÓA USER (GET / POST)
+        public ActionResult DeleteUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest();
+            }
+
+            var user = _database.Users.FirstOrDefault(u => u.Id == id);
+            if (user != null)
+            {
+                if (user.Email != "admin@rosaria.com") // Bảo vệ tài khoản admin chính
+                {
+                    _database.Users.Remove(user);
+                    _database.SaveChanges();
+                }
+            }
+
+            return RedirectToAction("Users");
         }
 
         // LẤY CHI TIẾT ĐƠN HÀNG(GET)

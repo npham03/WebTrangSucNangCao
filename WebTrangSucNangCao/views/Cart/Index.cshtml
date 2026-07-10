@@ -1,4 +1,4 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.CartItemViewModel>
+@model IEnumerable<WebTrangSucNangCao.Models.CartItemViewModel>
 @using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 
@@ -73,7 +73,7 @@
         @* MÃ GIỎ HÀNG RỖNG *@
         <div class="empty-cart-container text-center mt-5">
 
-            <img src="~/imgages/giohangtrong.png" alt="Giỏ hàng trống" style="max-width:300px;" />
+            <img src="~/images/giohangtrong.png" alt="Giỏ hàng trống" style="max-width:300px;" />
             <p class="mt-3 fs-5">Không có sản phẩm nào trong giỏ hàng của bạn</p>
             <a asp-controller="Home" asp-action="Index" class="btn btn-dark btn-continue-shopping mt-2">
                 TIẾP TỤC MUA HÀNG

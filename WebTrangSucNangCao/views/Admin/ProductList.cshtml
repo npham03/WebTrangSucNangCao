@@ -1,52 +1,77 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.Product>
+@model IEnumerable<WebTrangSucNangCao.Models.Product>
 @{
     ViewData["Title"] = "Quản lý Sản phẩm";
-    Layout = "_Layout";
+    Layout = "_AdminLayout";
 }
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col">
-            <h2 class="mb-4 border-bottom pb-2">Quản lý Sản phẩm</h2>
+<div class="arch-card">
+    <div class="arch-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-gem text-warning fs-5"></i>
+            <span class="fs-5">Quản lý Sản phẩm</span>
+            <span class="badge bg-dark ms-2" id="productCountBadge">@Model.Count() SP</span>
+        </div>
 
-            <p class="text-end">
-                <a asp-controller="Admin" asp-action="AddProduct" class="btn btn-dark fw-bold">+ Thêm Sản Phẩm Mới</a>
-            </p>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Live Search Input -->
+            <div class="input-group" style="width: 320px;">
+                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="productLiveSearch" class="form-control border-start-0" placeholder="Tìm nhanh tên sản phẩm..." autocomplete="off" />
+            </div>
 
-            <table class="table table-bordered table-striped align-middle">
-                <thead class="table-dark text-center">
+            <a asp-controller="Admin" asp-action="AddProduct" class="btn btn-dark fw-bold text-nowrap">
+                <i class="fas fa-plus me-1"></i> Thêm Sản Phẩm
+            </a>
+        </div>
+    </div>
+
+    <div class="p-4">
+        <!-- Products Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="productsTable">
+                <thead class="table-light">
                     <tr>
-                        <th>Ảnh</th>
+                        <th style="width: 80px;" class="text-center">Ảnh</th>
                         <th>Tên Sản Phẩm</th>
-                        <th>Giá</th>
+                        <th>Giá Bán</th>
                         <th>Danh Mục</th>
-                        <th style="width: 160px;">Thao tác</th>
+                        <th style="width: 170px;" class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr>
+                        <tr class="product-row" data-name="@item.NamePro?.ToLower()">
                             <td class="text-center">
-                                <img src="@Url.Content(Url.NormalizeImagePath(item.ImagePro))" style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                                <img src="@Url.Content(Url.NormalizeImagePath(item.ImagePro ?? "~/images/placeholder.png"))"
+                                     style="width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;" />
                             </td>
-                            <td class="fw-bold">@item.NamePro</td>
-                            <td class="text-end">@String.Format("{0:N0} VNĐ", item.Price)</td>
-                            <td class="text-center">
-                                <span class="badge bg-secondary">
-                                    @item.CategoryNavigation?.NameCate
+                            <td>
+                                <div class="fw-bold text-dark product-name-text">@item.NamePro</div>
+                                <small class="text-muted">Mã SP: #@item.ProductId</small>
+                            </td>
+                            <td class="fw-bold text-danger">@String.Format("{0:N0} VNĐ", item.Price)</td>
+                            <td>
+                                <span class="badge bg-secondary px-3 py-2">
+                                    @(item.CategoryNavigation?.NameCate ?? "Trang sức")
                                 </span>
                             </td>
-                            <td class="text-center">
-                                <a asp-controller="Admin" asp-action="Edit" asp-route-id="@item.ProductId"
-                                   class="btn btn-outline-dark btn-sm" style="background-color: white;">Sửa</a>
+                            <td class="text-center text-nowrap">
+                                <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3 me-1"
+                                        onclick="openMultiSizeModal(@item.ProductId)">
+                                    + Nhập Kho Size
+                                </button>
 
-                                <button class="btn btn-dark btn-sm ms-1 delete-btn"
+                                <a asp-controller="Admin" asp-action="Edit" asp-route-id="@item.ProductId"
+                                   class="btn btn-outline-dark btn-sm rounded-pill px-3">
+                                    Sửa
+                                </a>
+
+                                <button class="btn btn-dark btn-sm rounded-pill px-3 ms-1 delete-btn"
                                         data-id="@item.ProductId"
                                         data-name="@item.NamePro"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#deleteConfirmModal"
-                                        style="border-radius: 4px;">
+                                        data-bs-target="#deleteConfirmModal">
                                     Xóa
                                 </button>
                             </td>
@@ -54,17 +79,23 @@
                     }
                 </tbody>
             </table>
+
+            <!-- Empty search result alert -->
+            <div id="noProductMsg" class="text-center py-5 text-muted d-none">
+                <i class="fas fa-search fs-2 mb-2"></i>
+                <p class="mb-0">Không tìm thấy sản phẩm nào khớp với từ khóa tìm kiếm.</p>
+            </div>
         </div>
     </div>
 </div>
 
-@* === MODAL XÓA SẢN PHẨM === *@
+<!-- MODAL XÓA SẢN PHẨM -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Xác nhận xóa</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Xác nhận xóa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 Bạn có chắc muốn xóa sản phẩm: <strong id="productNameModal" class="text-danger"></strong>?
@@ -73,10 +104,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
-
                 <form asp-controller="Admin" asp-action="Delete" method="post">
                     <input type="hidden" name="id" id="deleteProductIdInput" />
-                    <button type="submit" class="btn btn-dark">Xác nhận Xóa</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận Xóa</button>
                 </form>
             </div>
         </div>
@@ -85,16 +115,42 @@
 
 @section Scripts {
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var deleteModal = document.getElementById('deleteConfirmModal');
-            deleteModal.addEventListener('show.bs.modal', function (event) {
-                var button = event.relatedTarget;
-                var productId = button.getAttribute('data-id');
-                var productName = button.getAttribute('data-name');
+        $(document).ready(function () {
+            // 1. Live Search (Client-side filtering)
+            $('#productLiveSearch').on('keyup input', function () {
+                const keyword = $(this).val().toLowerCase().trim();
+                let visibleCount = 0;
 
-                deleteModal.querySelector('#productNameModal').textContent = productName;
-                deleteModal.querySelector('#deleteProductIdInput').value = productId;
+                $('.product-row').each(function () {
+                    const rowName = $(this).data('name') || '';
+                    if (rowName.indexOf(keyword) !== -1) {
+                        $(this).show();
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
+                });
+
+                $('#productCountBadge').text(visibleCount + ' SP');
+
+                if (visibleCount === 0) {
+                    $('#noProductMsg').removeClass('d-none');
+                } else {
+                    $('#noProductMsg').addClass('d-none');
+                }
             });
+
+            // 2. Delete Modal Handler
+            const deleteModal = document.getElementById('deleteConfirmModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('show.bs.modal', function (event) {
+                    const button = event.relatedTarget;
+                    const productId = button.getAttribute('data-id');
+                    const productName = button.getAttribute('data-name');
+                    deleteModal.querySelector('#productNameModal').textContent = productName;
+                    deleteModal.querySelector('#deleteProductIdInput').value = productId;
+                });
+            }
         });
     </script>
 }

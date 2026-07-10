@@ -1,14 +1,14 @@
-﻿@model WebTrangSucNangCao.Models.OrderPro
+@model WebTrangSucNangCao.Models.OrderPro
 @{
     ViewData["Title"] = "Sửa Đơn Hàng";
-    Layout = "_Layout";
+    Layout = "_AdminLayout";
 }
 
 <div class="container mt-5">
     <h2>Sửa Trạng Thái Đơn Hàng #@Model.Id</h2>
     <hr />
 
-    <form asp-controller="Admin" asp-action="Edit" method="post">
+    <form asp-controller="Admin" asp-action="EditOrder" method="post">
 
         <input type="hidden" asp-for="Id" />
 

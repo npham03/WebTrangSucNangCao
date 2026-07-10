@@ -1,4 +1,4 @@
-﻿@model WebTrangSucNangCao.Models.CheckoutViewModel
+@model WebTrangSucNangCao.Models.CheckoutViewModel
 @{
     // Xài ViewData chứ đéo xài ViewBag
     ViewData["Title"] = "Thanh Toán";
@@ -38,16 +38,16 @@
                 <div class="payment-options">
                     @* 1. Ship COD (mặc định) *@
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="cod" value="COD" checked>
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="cod" value="COD" checked onchange="toggleQR()">
                         <label class="form-check-label" for="cod">
                             Ship COD (Thanh toán khi nhận hàng)
                         </label>
                     </div>
-                    @* 2. QR Code (làm mờ đi) *@
+                    @* 2. QR Code *@
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="qr" value="QR" disabled>
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="qr" value="QR" onchange="toggleQR()">
                         <label class="form-check-label" for="qr">
-                            Thanh toán bằng QR code (Đang bảo trì)
+                            Thanh toán bằng QR
                         </label>
                     </div>
                 </div>
@@ -75,7 +75,74 @@
                     <td>Tổng cộng</td>
                     <td class="text-end">@String.Format("{0:N0} VNĐ", Model.GrandTotal)</td>
                 </tr>
+                <tr id="qrCodeRow" style="display: none; transition: all 0.3s ease;">
+                    <td colspan="2" class="text-center pt-3 pb-3 bg-light rounded border">
+                        <div class="p-3 bg-white rounded shadow-sm d-inline-block w-100">
+                            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-qr-code-scan me-1"></i> Quét mã QR để chuyển khoản</h6>
+                            @{
+                                string bankBin = "970422"; 
+                                string bankAccount = "0928023638";
+                                string accountName = "PHAM VAN NGHIA";
+                                string addInfo = "Thanh toan don hang Rosaria";
+                                string qrUrl = $"https://img.vietqr.io/image/{bankBin}-{bankAccount}-compact2.png?amount={(long)Model.GrandTotal}&addInfo={Uri.EscapeDataString(addInfo)}&accountName={Uri.EscapeDataString(accountName)}";
+                            }
+                            <div class="my-2 text-center">
+                                <img src="@qrUrl" alt="Mã QR Thanh Toán" style="max-width: 240px; width: 100%; height: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px; background: #fff;" />
+                            </div>
+                            <div class="mt-2 small text-start px-2 bg-light p-2 rounded">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Ngân hàng:</span>
+                                    <span class="fw-bold">MB Bank (970422)</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Số tài khoản:</span>
+                                    <span class="fw-bold text-primary">@bankAccount</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Chủ tài khoản:</span>
+                                    <span class="fw-bold">@accountName</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Số tiền:</span>
+                                    <span class="fw-bold text-danger">@String.Format("{0:N0} VNĐ", Model.GrandTotal)</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Nội dung:</span>
+                                    <span class="fw-bold">@addInfo</span>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning py-2 px-2 mt-2 mb-0 small text-start d-flex align-items-center" style="font-size: 0.8rem;">
+                                <i class="bi bi-info-circle-fill me-2 fs-5 text-warning"></i>
+                                <span>Quét mã QR xong hoặc chuyển khoản thành công, vui lòng bấm <strong>"Xác nhận đặt hàng"</strong> bên dưới.</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
             </table>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleQR() {
+            var qrRadio = document.getElementById("qr");
+            var qrCodeRow = document.getElementById("qrCodeRow");
+            if (qrCodeRow) {
+                if (qrRadio && qrRadio.checked) {
+                    qrCodeRow.style.display = "table-row";
+                } else {
+                    qrCodeRow.style.display = "none";
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            toggleQR();
+            var radios = document.querySelectorAll('input[name="paymentMethod"]');
+            radios.forEach(function (radio) {
+                radio.addEventListener("change", toggleQR);
+            });
+        });
+    </script>
+}

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace WebTrangSucNangCao.Models // Sửa lại namespace cho đúng với project của mày
 {
@@ -28,6 +28,9 @@ namespace WebTrangSucNangCao.Models // Sửa lại namespace cho đúng với pr
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
+                    Name = "Admin",
+                    LastName = "Rosaria",
+                    Address = "Rosaria Jewelry Store",
                     EmailConfirmed = true // Tự động xác thực email để log in được luôn
                 };
 

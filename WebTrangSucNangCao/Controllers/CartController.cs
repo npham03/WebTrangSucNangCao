@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -300,12 +300,10 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
 
                 if (user != null)
                 {
-                    // LƯU Ý: Vì đang dùng IdentityUser chuẩn của Core nên không có thuộc tính Name, LastName, Address
-                    // Tạm thời gán FullName bằng UserName (Email) và Phone. 
-                    // Nếu bạn đã tạo class ApplicationUser có Address, bạn cần cast (ApplicationUser)user ở đây.
-                    viewModel.FullName = user.UserName;
+                    string fullName = $"{user.LastName} {user.Name}".Trim();
+                    viewModel.FullName = string.IsNullOrEmpty(fullName) ? user.UserName : fullName;
                     viewModel.Phone = user.PhoneNumber;
-                    viewModel.Address = ""; // Nếu có ApplicationUser, đổi thành user.Address
+                    viewModel.Address = user.Address;
                 }
             }
 
@@ -331,20 +329,31 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 if (currentUser != null)
                 {
                     currentUser.PhoneNumber = viewModel.Phone;
-                    // currentUser.Address = viewModel.Address; // Mở comment nếu đã cấu hình ApplicationUser
+                    currentUser.Address = viewModel.Address;
                     await _userManager.UpdateAsync(currentUser);
                 }
             }
 
-            // 1. TẠO KHÁCH HÀNG
-            Customer orderCustomer = new Customer
+            // 1. TẠO HOẶC LẤY KHÁCH HÀNG
+            string emailCus = User.Identity.IsAuthenticated ? User.Identity.Name : "guest@email.com";
+            Customer orderCustomer = _database.Customers.FirstOrDefault(c => c.EmailCus == emailCus);
+            if (orderCustomer == null)
             {
-                NameCus = viewModel.FullName,
-                PhoneCus = viewModel.Phone,
-                EmailCus = User.Identity.IsAuthenticated ? User.Identity.Name : "guest@email.com"
-            };
-            _database.Customers.Add(orderCustomer);
-            _database.SaveChanges();
+                orderCustomer = new Customer
+                {
+                    NameCus = viewModel.FullName,
+                    PhoneCus = viewModel.Phone,
+                    EmailCus = emailCus
+                };
+                _database.Customers.Add(orderCustomer);
+                _database.SaveChanges();
+            }
+            else
+            {
+                orderCustomer.NameCus = viewModel.FullName;
+                orderCustomer.PhoneCus = viewModel.Phone;
+                _database.SaveChanges();
+            }
 
             // 2. TẠO ĐƠN HÀNG (OrderPro)
             OrderPro newOrder = new OrderPro
@@ -389,7 +398,12 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             // 5. Xóa giỏ hàng
             ClearCart();
 
-            // 6. Chuyển qua trang Cảm ơn
+            // 6. Chuyển qua trang Cảm ơn hoặc trang QR
+            string paymentMethod = HttpContext.Request.Form["paymentMethod"];
+            if (paymentMethod == "QR")
+            {
+                return RedirectToAction("PaymentQR", new { orderId = newOrder.Id });
+            }
             return RedirectToAction("ThankYou");
         }
 

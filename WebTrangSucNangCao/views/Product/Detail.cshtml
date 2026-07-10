@@ -1,4 +1,4 @@
-﻿@model WebTrangSucNangCao.Models.ProductDetailViewModel
+@model WebTrangSucNangCao.Models.ProductDetailViewModel
 @{
     ViewData["Title"] = Model.Product.NamePro;
     Layout = "_Layout";
@@ -12,6 +12,7 @@
 
     .product-detail-page {
         margin-top: 40px;
+        margin-bottom: 70px;
     }
     .product-detail-page .col-md-7 {
         padding-left: 5px !important; 
@@ -160,6 +161,7 @@
 
     .related-products {
         margin-top: 60px;
+        margin-bottom: 30px;
         padding-top: 30px;
         border-top: 1px solid #eee;
     }
@@ -308,7 +310,7 @@
                             <div class="col-md-3">
                                 <a href="@Url.Action("Detail", "Product", new { id = product.ProductId })" class="product-card-link">
                                     <div class="product-card">
-                                        <img src="@Url.Content(product.ImagePro ?? "~/Content/Img/placeholder.png")" class="product-image" alt="@product.NamePro">
+                                        <img src="@Url.Content(Url.NormalizeImagePath(product.ImagePro ?? "~/images/placeholder.png"))" class="product-image" alt="@product.NamePro">
                                         <div class="product-info">
                                             <h5 class="product-name">@product.NamePro</h5>
                                             <p class="product-price">@String.Format("{0:N0} VNĐ", product.Price)</p>

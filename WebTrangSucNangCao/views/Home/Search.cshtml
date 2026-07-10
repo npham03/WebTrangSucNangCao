@@ -1,4 +1,4 @@
-﻿@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
+@model IEnumerable<WebTrangSucNangCao.Models.ProductHomeViewModel>
 @{
     // Xài ViewData chứ đéo xài ViewBag cho cái Title
     ViewData["Title"] = "Kết quả tìm kiếm";
@@ -32,7 +32,7 @@
 
                                 <div class="product-image-wrapper">
                                     @* Ảnh chính: Đéo xài Url.Content nữa, nhét dấu ~/ vào là xong *@
-                                    <img src="@Url.Content(Url.NormalizeImagePath(pvm.Product.ImagePro ?? "~/imgages/placeholder.png"))"
+                                    <img src="@Url.Content(Url.NormalizeImagePath(pvm.Product.ImagePro ?? "~/images/placeholder.png"))"
                                          class="product-image img-main" alt="@pvm.Product.NamePro">
 
                                     @* Ảnh Hover (Nếu có) *@
