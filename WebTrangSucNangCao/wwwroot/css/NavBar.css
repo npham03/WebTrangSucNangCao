@@ -154,6 +154,7 @@
 .navbar.nav-transparent {
     background-color: transparent !important;
     box-shadow: none !important;
+    mix-blend-mode: difference !important;
 }
 
 .navbar.nav-transparent .brand,
@@ -163,20 +164,20 @@
 .navbar.nav-transparent .lang-switch,
 .navbar.nav-transparent .user-icon-nav {
     color: #ffffff !important;
-    mix-blend-mode: difference !important;
+    mix-blend-mode: normal !important;
 }
 
 .navbar.nav-transparent .logo,
 .navbar.nav-transparent .icon {
     filter: invert(1) brightness(2) !important;
-    mix-blend-mode: difference !important;
+    mix-blend-mode: normal !important;
 }
 
 .navbar.nav-transparent .search-box {
     background: transparent !important;
     border: 1px solid rgba(255, 255, 255, 0.45) !important;
     box-shadow: none !important;
-    mix-blend-mode: difference !important;
+    mix-blend-mode: normal !important;
 }
 
 .navbar.nav-transparent .search-box input {
@@ -196,6 +197,7 @@
     background-color: rgba(0, 0, 0, 0.75) !important;
     backdrop-filter: blur(8px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
+    mix-blend-mode: normal !important;
 }
 
 .navbar.nav-transparent:hover .brand,
@@ -244,6 +246,7 @@
 .navbar.nav-scrolled {
     background-color: #ffffff !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+    mix-blend-mode: normal !important;
 }
 
 .navbar.nav-scrolled .brand,
