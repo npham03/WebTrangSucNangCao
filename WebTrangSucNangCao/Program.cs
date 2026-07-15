@@ -31,7 +31,14 @@ var app = builder.Build();
 
 // Sử dụng Session
 app.UseSession();
-app.UseStaticFiles();
+// Cấu hình MIME types cho file 3D model (.glb, .gltf)
+var contentTypeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+contentTypeProvider.Mappings[".glb"] = "model/gltf-binary";
+contentTypeProvider.Mappings[".gltf"] = "model/gltf+json";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = contentTypeProvider
+});
 
 // Backward compatibility: Hỗ trợ tự động map các đường dẫn ảnh cũ (imgages, imagesProducts, Content/Img) vào thư mục images chuẩn
 var imagesPath = Path.Combine(builder.Environment.WebRootPath, "images");

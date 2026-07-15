@@ -193,6 +193,164 @@
         color: #fff;
     }
 
+    /* === AR 3D TRY-ON STYLES === */
+    .btn-ar-tryon {
+        width: 100%;
+        margin-top: 10px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        color: #fff;
+        border: 2px solid transparent;
+        padding: 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+        border-radius: 50px !important;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .btn-ar-tryon::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+        transition: left 0.5s;
+    }
+    .btn-ar-tryon:hover::before { left: 100%; }
+    .btn-ar-tryon:hover {
+        background: linear-gradient(135deg, #0f3460 0%, #16213e 50%, #1a1a2e 100%);
+        color: #fff;
+        box-shadow: 0 4px 20px rgba(15,52,96,0.4);
+    }
+
+    #arCameraContainer {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+        margin-top: 15px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        background: #000;
+    }
+    #arVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+        display: block;
+    }
+    #arOverlayContainer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    /* Loading spinner */
+    .ar-loading {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.6);
+        z-index: 20;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .ar-loading__spinner {
+        width: 48px; height: 48px;
+        border: 4px solid rgba(255,255,255,0.2);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: arSpin 0.8s linear infinite;
+    }
+    .ar-loading__text {
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    @@keyframes arSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Status indicator */
+    .ar-status {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        padding: 8px 16px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 15;
+        transition: all 0.3s ease;
+    }
+    .ar-status--loading {
+        background: rgba(255,193,7,0.85);
+        color: #000;
+    }
+    .ar-status--ready {
+        background: rgba(0,0,0,0.55);
+        color: #fff;
+    }
+    .ar-status--success {
+        background: rgba(40,167,69,0.85);
+        color: #fff;
+    }
+    .ar-status--error {
+        background: rgba(220,53,69,0.85);
+        color: #fff;
+    }
+
+    /* Toast notification */
+    .ar-toast {
+        position: fixed;
+        top: 20px; right: 20px;
+        max-width: 400px;
+        padding: 14px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 9999;
+        transform: translateX(120%);
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .ar-toast--visible {
+        transform: translateX(0);
+    }
+    .ar-toast--error {
+        background: #dc3545;
+        color: #fff;
+    }
+    .ar-toast--info {
+        background: #17a2b8;
+        color: #fff;
+    }
+
+    /* Close button */
+    .ar-close-btn {
+        position: absolute;
+        top: 10px; right: 10px;
+        z-index: 10;
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: rgba(220,53,69,0.9);
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        backdrop-filter: blur(4px);
+    }
+    .ar-close-btn:hover {
+        background: #dc3545;
+        transform: scale(1.1);
+    }
+
 </style>
 
 
@@ -269,24 +427,33 @@
                 <form asp-controller="Cart" asp-action="BuyNow" method="post" class="cart-form">
                     <input type="hidden" name="variantId" value="@defaultVariantId" class="selected-variant-input" />
                     <button type="submit" class="btn btn-buy-now">MUA NGAY</button>
-                </form> <button type="button" class="btn btn-ar-tryon" id="btnStartAR" style="width: 100%; margin-top: 10px;">
-                    <i class="fas fa-camera me-2"></i> THỬ VÒNG TAY QUA CAMERA
+                </form>
+                <button type="button" class="btn btn-ar-tryon" id="btnStartAR">
+                    <i class="fas fa-camera me-2"></i> THỬ NHẪN QUA CAMERA
                 </button>
 
-                <div id="arCameraContainer" style="display: none; position: relative; width: 100%; max-width: 500px; margin-top: 15px;">
-                    <video id="arVideo" style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);" autoplay playsinline></video>
-                    <canvas id="arCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1);"></canvas>
-                    
-                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
-                        <button type="button" id="btnStopAR" class="btn btn-sm btn-danger" style="border-radius: 50%;">
-                            <i class="fas fa-times"></i> Tắt
-                        </button>
+                @* === AR 3D TRY-ON CONTAINER === *@
+                <div id="arCameraContainer" style="display: none;">
+                    <video id="arVideo" autoplay playsinline></video>
+                    <div id="arOverlayContainer"></div>
+
+                    @* Loading overlay *@
+                    <div id="arLoading" class="ar-loading">
+                        <div class="ar-loading__spinner"></div>
+                        <div class="ar-loading__text">Đang tải model 3D...</div>
                     </div>
-                    
-                    <div style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.5); padding: 5px;">
-                        Đưa cổ tay của bạn vào trước Camera để thử vòng tay
-                    </div>
+
+                    @* Status bar *@
+                    <div id="arStatus" class="ar-status" style="display:none;"></div>
+
+                    @* Close button *@
+                    <button type="button" id="btnStopAR" class="ar-close-btn" title="Tắt camera">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
+
+                @* Toast notification (fixed position) *@
+                <div id="arToast" class="ar-toast"></div>
 
                 <div class="product-description-short">
                     <h4>Mô tả</h4>
@@ -400,7 +567,7 @@
             var addToCartForm = document.getElementById('addToCartForm');
             if (addToCartForm) {
                 addToCartForm.addEventListener('submit', function (e) {
-                    e.preventDefault(); // Chặn submit thường
+                    e.preventDefault();
 
                     var hiddenInput = this.querySelector('.selected-variant-input');
                     if (hiddenInput.value === "") {
@@ -408,7 +575,6 @@
                         return;
                     }
 
-                    // Gửi AJAX
                     var formData = new FormData(this);
                     fetch(this.action, {
                         method: 'POST',
@@ -417,15 +583,10 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                // Điền dữ liệu vào Modal
                                 document.getElementById('modalProductName').innerText = data.productName;
                                 document.getElementById('modalCartQty').innerText = data.quantity;
-
-                                // Xử lý đường dẫn ảnh (bỏ dấu ~)
                                 var cleanPath = data.productImage.replace('~', '');
                                 document.getElementById('modalProductImg').src = cleanPath;
-
-                                // Hiện Modal
                                 var myModal = new bootstrap.Modal(document.getElementById('addedToCartModal'));
                                 myModal.show();
                             } else {
@@ -436,7 +597,7 @@
                 });
             }
 
-            // Xử lý form Mua Ngay (chỉ cần check validation)
+            // Xử lý form Mua Ngay
             document.querySelectorAll('.cart-form').forEach(form => {
                 if (form.id !== 'addToCartForm') {
                     form.addEventListener('submit', function (e) {
@@ -451,99 +612,52 @@
         });
     </script>
 
-    @* SỬA LỖI: BIẾN HAI DẤU @@ ĐỂ KHÔNG BỊ LỖI LIÊN KẾT RAZOR C# *@
+    @* === THƯ VIỆN BÊN NGOÀI === *@
+    @* MediaPipe Hands + Camera Utils *@
     <script src="https://cdn.jsdelivr.net/npm/@@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
-    <script>
-        const videoElement = document.getElementById('arVideo');
-        const canvasElement = document.getElementById('arCanvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        const btnStartAR = document.getElementById('btnStartAR');
-        const btnStopAR = document.getElementById('btnStopAR');
-        const arContainer = document.getElementById('arCameraContainer');
-
-        const braceletImage = new Image();
-        braceletImage.src = "@Url.Content(Url.NormalizeImagePath(Model.Product.ImagePro))"; 
-
-        let cameraActive = null;
-
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@@mediapipe/hands/${file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        hands.onResults(onARResults);
-
-        function onARResults(results) {
-            if (canvasElement.width !== videoElement.videoWidth) {
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-            }
-
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const wrist = landmarks[0];
-                const thumbBase = landmarks[1];
-                const pinkyBase = landmarks[17];
-
-                const wristX = wrist.x * canvasElement.width;
-                const wristY = wrist.y * canvasElement.height;
-
-                const tX = thumbBase.x * canvasElement.width;
-                const tY = thumbBase.y * canvasElement.height;
-                const pX = pinkyBase.x * canvasElement.width;
-                const pY = pinkyBase.y * canvasElement.height;
-
-                const handWidth = Math.sqrt(Math.pow(pX - tX, 2) + Math.pow(pY - tY, 2));
-                const braceletWidth = handWidth * 1.6; 
-                const braceletHeight = braceletWidth * (braceletImage.height / braceletImage.width || 1);
-
-                const angle = Math.atan2(pY - tY, pX - tX);
-
-                canvasCtx.save();
-                canvasCtx.translate(wristX, wristY + (braceletHeight * 0.15)); 
-                canvasCtx.rotate(angle);
-                
-                canvasCtx.drawImage(braceletImage, -braceletWidth / 2, -braceletHeight / 2, braceletWidth, braceletHeight);
-                canvasCtx.restore();
-            }
+    @* Three.js importmap — bắt buộc để GLTFLoader resolve được 'three' *@
+    @Html.Raw(@"<script type=""importmap"">
+    {
+        ""imports"": {
+            ""three"": ""https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js"",
+            ""three/addons/"": ""https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/""
         }
+    }
+    </script>")
 
-        btnStartAR.addEventListener('click', async () => {
-            arContainer.style.display = 'block';
-            btnStartAR.style.display = 'none';
+    @* Load Three.js + GLTFLoader rồi expose ra window cho ringTryOn.js (IIFE) *@
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-            if (!cameraActive) {
-                cameraActive = new Camera(videoElement, {
-                    onFrame: async () => {
-                        await hands.send({ image: videoElement });
-                    },
-                    width: 640,
-                    height: 480
-                });
+        // Gắn vào window để ringTryOn.js (non-module) truy cập được
+        // ES module namespace là frozen/read-only → dùng Proxy để wrap
+        const extras = { GLTFLoader };
+        window.THREE = new Proxy(THREE, {
+            get(target, prop) {
+                return prop in extras ? extras[prop] : target[prop];
             }
-            cameraActive.start().catch(err => {
-                alert("Không thể truy cập camera. Vui lòng cấp quyền camera cho trình duyệt!");
-                console.error(err);
+        });
+
+        // Load ringTryOn.js sau khi THREE sẵn sàng
+        const s = document.createElement('script');
+        s.src = '/js/ringTryOn.js';
+        s.onload = function() {
+            RingTryOn.init();
+
+            document.getElementById('btnStartAR').addEventListener('click', function() {
+                RingTryOn.start();
             });
-        });
-
-        btnStopAR.addEventListener('click', () => {
-            if (cameraActive) {
-                cameraActive.stop();
-            }
-            arContainer.style.display = 'none';
-            btnStartAR.style.display = 'block';
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        });
+            document.getElementById('btnStopAR').addEventListener('click', function() {
+                RingTryOn.stop();
+            });
+        };
+        s.onerror = function() {
+            console.error('[RingTryOn] Không thể load ringTryOn.js');
+            alert('Lỗi: Không thể tải module thử nhẫn 3D.');
+        };
+        document.body.appendChild(s);
     </script>
 }
