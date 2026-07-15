@@ -20,6 +20,22 @@
     position: sticky;
     top: 0;
     z-index: 1050;
+    transition: background-color 0.35s ease, box-shadow 0.35s ease, backdrop-filter 0.35s ease !important;
+}
+
+/* HIỆU ỨNG CHUYỂN MƯỢT MÀ CHO CÁC THÀNH PHẦN BÊN TRONG NAVBAR */
+.navbar .brand,
+.navbar .brand-name,
+.navbar .nav-links a,
+.navbar .nav-right > a > i,
+.navbar .lang-switch,
+.navbar .user-icon-nav,
+.navbar .logo,
+.navbar .icon,
+.navbar .search-box,
+.navbar .search-box input,
+.navbar .search-box i {
+    transition: color 0.35s ease, filter 0.35s ease, background-color 0.35s ease, border-color 0.35s ease !important;
 }
 
 /* PHẦN 1.1: LOGO + TÊN THƯƠNG HIỆU */
@@ -120,6 +136,177 @@
 
 .lang-switch span:hover {
     color: #555;
+}
+
+/* ========================================================= */
+/* === TRẠNG THÁI NAVBAR CHO TRANG CÓ BANNER (DIRTYCOINS) === */
+/* ========================================================= */
+
+.navbar.navbar-fixed-over-banner {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1050;
+}
+
+/* 1. KHI Ở TRÊN CÙNG (CHƯA HOVER): NỀN TRONG SUỐT + CHỮ ĐẢO MÀU BANNER */
+.navbar.nav-transparent {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.navbar.nav-transparent .brand,
+.navbar.nav-transparent .brand-name,
+.navbar.nav-transparent .nav-links a,
+.navbar.nav-transparent .nav-right > a > i,
+.navbar.nav-transparent .lang-switch,
+.navbar.nav-transparent .user-icon-nav {
+    color: #ffffff !important;
+    mix-blend-mode: difference !important;
+}
+
+.navbar.nav-transparent .logo,
+.navbar.nav-transparent .icon {
+    filter: invert(1) brightness(2) !important;
+    mix-blend-mode: difference !important;
+}
+
+.navbar.nav-transparent .search-box {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: none !important;
+    mix-blend-mode: difference !important;
+}
+
+.navbar.nav-transparent .search-box input {
+    color: #ffffff !important;
+}
+
+.navbar.nav-transparent .search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.navbar.nav-transparent .search-box i {
+    color: #ffffff !important;
+}
+
+/* 2. KHI ĐƯA CHUỘT VÀO NAVBAR TRONG SUỐT: GIẢM ĐỘ TRONG SUỐT NỀN ĐEN XÍU + CHỮ MÀU TRẮNG */
+.navbar.nav-transparent:hover {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
+}
+
+.navbar.nav-transparent:hover .brand,
+.navbar.nav-transparent:hover .brand-name,
+.navbar.nav-transparent:hover .nav-links a,
+.navbar.nav-transparent:hover .nav-right > a > i,
+.navbar.nav-transparent:hover .lang-switch,
+.navbar.nav-transparent:hover .user-icon-nav {
+    color: #ffffff !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-transparent:hover .logo,
+.navbar.nav-transparent:hover .icon {
+    filter: invert(1) brightness(2) !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-transparent:hover .search-box {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-transparent:hover .search-box input {
+    color: #ffffff !important;
+}
+
+.navbar.nav-transparent:hover .search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.navbar.nav-transparent:hover .search-box i {
+    color: #ffffff !important;
+}
+
+/* Hover link khi ở chế độ nền trong/đen */
+.navbar.nav-transparent .nav-links a:hover,
+.navbar.nav-transparent:hover .nav-links a:hover,
+.navbar.nav-transparent .lang-switch:hover,
+.navbar.nav-transparent:hover .lang-switch:hover {
+    opacity: 0.75;
+}
+
+/* 3. KHI QUA HẾT BANNER: ĐỔI THÀNH NỀN TRẮNG CHỮ ĐEN */
+.navbar.nav-scrolled {
+    background-color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+.navbar.nav-scrolled .brand,
+.navbar.nav-scrolled .brand-name,
+.navbar.nav-scrolled .nav-links a,
+.navbar.nav-scrolled .nav-right > a > i,
+.navbar.nav-scrolled .lang-switch,
+.navbar.nav-scrolled .user-icon-nav {
+    color: #000000 !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-scrolled .logo,
+.navbar.nav-scrolled .icon {
+    filter: none !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-scrolled .search-box {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    mix-blend-mode: normal !important;
+}
+
+.navbar.nav-scrolled .search-box input {
+    color: #000000 !important;
+}
+
+.navbar.nav-scrolled .search-box input::placeholder {
+    color: #888888 !important;
+}
+
+.navbar.nav-scrolled .search-box i {
+    color: #333333 !important;
+}
+
+/* Đảm bảo Dropdown của User luôn hiển thị nền trắng chữ đen chuẩn, không bị ảnh hưởng bởi invert/mix-blend-mode */
+.navbar .user-dropdown,
+.navbar.nav-transparent .user-dropdown,
+.navbar.nav-transparent:hover .user-dropdown,
+.navbar.nav-scrolled .user-dropdown {
+    background-color: #ffffff !important;
+    border: 1px solid #dddddd !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.navbar .user-dropdown *,
+.navbar.nav-transparent .user-dropdown *,
+.navbar.nav-transparent:hover .user-dropdown *,
+.navbar.nav-scrolled .user-dropdown * {
+    color: #333333 !important;
+    mix-blend-mode: normal !important;
+    filter: none !important;
+}
+
+.navbar .user-dropdown .logout-link:hover,
+.navbar .user-dropdown .login-register-link:hover,
+.navbar.nav-transparent .user-dropdown .logout-link:hover,
+.navbar.nav-transparent .user-dropdown .login-register-link:hover,
+.navbar.nav-scrolled .user-dropdown .logout-link:hover,
+.navbar.nav-scrolled .user-dropdown .login-register-link:hover {
+    color: #000000 !important;
+    text-decoration: underline !important;
 }
 
 /* ================================================ */
