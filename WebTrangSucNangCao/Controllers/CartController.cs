@@ -290,8 +290,26 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             var viewModel = new CheckoutViewModel();
             var cartItems = GetCartItems();
 
+            if (cartItems == null || !cartItems.Any())
+            {
+                return RedirectToAction("Index"); // Giỏ trống thì bắt về giỏ hàng
+            }
+
             viewModel.CartItems = cartItems;
-            viewModel.GrandTotal = cartItems.Sum(item => item.Price * item.Quantity);
+            viewModel.CartSubtotal = cartItems.Sum(item => item.Price * item.Quantity);
+
+            // Kiểm tra và load mã giảm giá đã áp dụng trước đó từ Session (nếu có)
+            var sessionCoupon = HttpContext.Session.GetString("AppliedCoupon");
+            var sessionDiscountStr = HttpContext.Session.GetString("DiscountAmount");
+            if (!string.IsNullOrEmpty(sessionCoupon) && decimal.TryParse(sessionDiscountStr, out decimal discount))
+            {
+                viewModel.CouponCode = sessionCoupon;
+                viewModel.DiscountAmount = discount;
+            }
+
+            // Mặc định phí ship ban đầu
+            viewModel.ShippingFee = 30000; 
+            if (sessionCoupon == "FREESHIP") viewModel.ShippingFee = 0;
 
             if (User.Identity.IsAuthenticated)
             {
@@ -301,9 +319,11 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 if (user != null)
                 {
                     string fullName = $"{user.LastName} {user.Name}".Trim();
-                    viewModel.FullName = string.IsNullOrEmpty(fullName) ? user.UserName : fullName;
+                    viewModel.Name = string.IsNullOrEmpty(fullName) ? user.UserName : fullName;
                     viewModel.Phone = user.PhoneNumber;
-                    viewModel.Address = user.Address;
+                    
+                    // Nếu user có sẵn địa chỉ từ trước, ta gán tạm vào StreetAddress để khách chỉnh sửa
+                    viewModel.StreetAddress = user.Address;
                 }
             }
 
@@ -315,21 +335,35 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Checkout(CheckoutViewModel viewModel)
         {
+            var cartItems = GetCartItems();
+            viewModel.CartItems = cartItems;
+            viewModel.CartSubtotal = cartItems.Sum(item => item.Price * item.Quantity);
+
+            // Tái tính toán số tiền giảm giá ở Backend dựa trên Session để bảo mật tuyệt đối
+            var sessionCoupon = HttpContext.Session.GetString("AppliedCoupon");
+            var sessionDiscountStr = HttpContext.Session.GetString("DiscountAmount");
+            if (!string.IsNullOrEmpty(sessionCoupon) && decimal.TryParse(sessionDiscountStr, out decimal discount))
+            {
+                viewModel.CouponCode = sessionCoupon;
+                viewModel.DiscountAmount = discount;
+            }
+
             if (!ModelState.IsValid)
             {
-                viewModel.CartItems = GetCartItems();
-                viewModel.GrandTotal = viewModel.CartItems.Sum(item => item.Price * item.Quantity);
                 return View(viewModel);
             }
+
+            // Ghép chuỗi địa chỉ phân cấp thành địa chỉ đầy đủ trước khi lưu DB
+            string fullAddress = $"{viewModel.StreetAddress}, {viewModel.Ward}, {viewModel.District}, {viewModel.Province}";
+            viewModel.Address = fullAddress;
 
             if (User.Identity.IsAuthenticated)
             {
                 var currentUser = await _userManager.FindByIdAsync(_userManager.GetUserId(User));
-
                 if (currentUser != null)
                 {
                     currentUser.PhoneNumber = viewModel.Phone;
-                    currentUser.Address = viewModel.Address;
+                    currentUser.Address = fullAddress; // Lưu địa chỉ mới nhất ghép từ tỉnh quận phường
                     await _userManager.UpdateAsync(currentUser);
                 }
             }
@@ -341,7 +375,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             {
                 orderCustomer = new Customer
                 {
-                    NameCus = viewModel.FullName,
+                    NameCus = viewModel.Name,
                     PhoneCus = viewModel.Phone,
                     EmailCus = emailCus
                 };
@@ -350,7 +384,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             }
             else
             {
-                orderCustomer.NameCus = viewModel.FullName;
+                orderCustomer.NameCus = viewModel.Name;
                 orderCustomer.PhoneCus = viewModel.Phone;
                 _database.SaveChanges();
             }
@@ -359,17 +393,14 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             OrderPro newOrder = new OrderPro
             {
                 DateOrder = DateOnly.FromDateTime(DateTime.Now),
-                AddressDeliverry = viewModel.Address,
+                AddressDeliverry = viewModel.Address, // Lưu địa chỉ đầy đủ đã ghép chuỗi
                 Status = "Đang xử lý",
                 Idcus = orderCustomer.Idcus
             };
             _database.OrderPros.Add(newOrder);
             _database.SaveChanges();
 
-            // 3. Lấy giỏ hàng
-            var cartItems = GetCartItems();
-
-            // 4. Copy qua Chi tiết đơn hàng
+            // 3. Sao chép qua Chi tiết đơn hàng
             foreach (var item in cartItems)
             {
                 OrderDetail detail = new OrderDetail
@@ -395,27 +426,164 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             }
             _database.SaveChanges();
 
-            // 5. Xóa giỏ hàng
+            // 4. Xóa giỏ hàng & Xóa mã giảm giá đã áp dụng trong Session
             ClearCart();
+            HttpContext.Session.Remove("AppliedCoupon");
+            HttpContext.Session.Remove("DiscountAmount");
 
-            // 6. Chuyển qua trang Cảm ơn hoặc trang QR
+            // 5. Chuyển hướng thanh toán
             string paymentMethod = HttpContext.Request.Form["paymentMethod"];
             if (paymentMethod == "QR")
             {
                 return RedirectToAction("PaymentQR", new { orderId = newOrder.Id });
             }
-            return RedirectToAction("ThankYou");
+            return RedirectToAction("ThankYou", new { id = newOrder.Id });
         }
 
-        public ActionResult ThankYou()
+
+
+
+        // API ÁP DỤNG MÃ GIẢM GIÁ (Ajax gọi từ Frontend)
+        [HttpPost]
+        public IActionResult ApplyCoupon(string couponCode)
         {
+            if (string.IsNullOrEmpty(couponCode))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập mã giảm giá" });
+            }
+
+            // Lấy tổng tiền giỏ hàng hiện tại
+            var cartItems = GetCartItems();
+            decimal totalCartAmount = cartItems.Sum(item => item.Price * item.Quantity);
+
+            // Giả lập logic kiểm tra Coupon từ database (Bạn có thể map với table Coupon trong DB sau này)
+            // Ở đây định nghĩa mẫu một số mã giảm giá thông dụng
+            decimal discount = 0;
+            string message = "";
+            bool success = false;
+
+            string normalizedCode = couponCode.Trim().ToUpper();
+
+            if (normalizedCode == "ROSARIA10") // Giảm 10%
+            {
+                discount = totalCartAmount * 0.10m;
+                message = "Áp dụng mã ROSARIA10 thành công (Giảm 10%)";
+                success = true;
+            }
+            else if (normalizedCode == "GIAM50K") // Giảm thẳng 50k cho đơn từ 500k
+            {
+                if (totalCartAmount >= 500000)
+                {
+                    discount = 50000;
+                    message = "Áp dụng mã GIAM50K thành công (Giảm 50.000đ)";
+                    success = true;
+                }
+                else
+                {
+                    message = "Mã GIAM50K chỉ áp dụng cho đơn hàng từ 500.000đ";
+                }
+            }
+            else if (normalizedCode == "FREESHIP") // Ví dụ mã freeship
+            {
+                // Logic freeship sẽ được tính toán trực tiếp vào phí vận chuyển ở bước Checkout
+                discount = 0; 
+                message = "Áp dụng mã miễn phí vận chuyển thành công!";
+                success = true;
+            }
+            else
+            {
+                message = "Mã giảm giá không tồn tại hoặc đã hết hạn";
+            }
+
+            // Lưu mã giảm giá đã áp dụng thành công vào Session để Checkout sử dụng lại (tránh hack từ front-end)
+            if (success)
+            {
+                HttpContext.Session.SetString("AppliedCoupon", normalizedCode);
+                HttpContext.Session.SetString("DiscountAmount", discount.ToString());
+            }
+            else
+            {
+                HttpContext.Session.Remove("AppliedCoupon");
+                HttpContext.Session.Remove("DiscountAmount");
+            }
+
+            return Json(new { 
+                success = success, 
+                message = message, 
+                discountAmount = discount,
+                newTotal = Math.Max(0, totalCartAmount - discount)
+            });
+        }
+
+        // API TÍNH PHÍ SHIP THEO TỈNH/THÀNH PHỐ (Ajax gọi từ Frontend)
+        [HttpGet]
+        public IActionResult GetShippingFee(string province)
+        {
+            decimal shippingFee = 30000; // Phí ship mặc định 30k
+
+            if (!string.IsNullOrEmpty(province))
+            {
+                string cleanProvince = province.ToLower();
+                // Ví dụ: Nội thành TP.HCM hoặc Hà Nội phí ship rẻ hơn, các tỉnh khác đắt hơn
+                if (cleanProvince.Contains("hồ chí minh") || cleanProvince.Contains("hcm") || cleanProvince.Contains("hà nội"))
+                {
+                    shippingFee = 15000; // 15k
+                }
+                else if (cleanProvince.Contains("đà nẵng") || cleanProvince.Contains("cần thơ") || cleanProvince.Contains("hải phòng"))
+                {
+                    shippingFee = 25000; // 25k
+                }
+                else
+                {
+                    shippingFee = 35000; // Các tỉnh xa 35k
+                }
+            }
+
+            // Kiểm tra nếu đang có mã giảm giá "FREESHIP" thì đặt ship về 0
+            var appliedCoupon = HttpContext.Session.GetString("AppliedCoupon");
+            if (appliedCoupon == "FREESHIP")
+            {
+                shippingFee = 0;
+            }
+
+            return Json(new { shippingFee = shippingFee });
+        }
+        // GET: Cart/ThankYou
+        public IActionResult ThankYou(int id)
+        {
+            // Lấy thông tin đơn hàng kèm chi tiết sản phẩm và thông tin khách hàng
+            var order = _database.OrderPros
+                .Where(o => o.Id == id)
+                .Select(o => new {
+                    OrderId = o.Id,
+                    Date = o.DateOrder,
+                    Address = o.AddressDeliverry,
+                    Status = o.Status,
+                    CustomerName = _database.Customers.Where(c => c.Idcus == o.Idcus).Select(c => c.NameCus).FirstOrDefault(),
+                    CustomerPhone = _database.Customers.Where(c => c.Idcus == o.Idcus).Select(c => c.PhoneCus).FirstOrDefault(),
+                    Details = _database.OrderDetails
+                        .Where(d => d.Idorder == o.Id)
+                        .Select(d => new {
+                            ProductName = _database.Products.Where(p => p.ProductId == d.Idproduct).Select(p => p.NamePro).FirstOrDefault(),
+                            Quantity = d.Quantity,
+                            Price = d.UnitPrice
+                        }).ToList()
+                }).FirstOrDefault();
+
+            if (order == null)
+            {
+                // Nếu không tìm thấy đơn hàng, trả về view trống hoặc trang chủ
+                return RedirectToAction("Index", "Home");
+            }
+
+            // Truyền dữ liệu qua ViewBag để hiển thị ngoài giao diện View
+            ViewBag.Order = order;
             return View();
         }
 
         // =============================================
         // === CÁC HÀM PRIVATE ===
         // =============================================
-
         private void ClearCart()
         {
             if (User.Identity.IsAuthenticated)

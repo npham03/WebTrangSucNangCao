@@ -14,7 +14,7 @@
     const SMOOTHING_FACTOR = 0.35; // 0 = no smooth, 1 = freeze (position/scale)
     const ROTATION_SMOOTHING = 0.3; // slerp factor cho quaternion
     const HAND_GONE_FRAMES = 8;    // số frame không thấy tay thì ẩn model
-    const RING_SCALE_MULTIPLIER = 1.0; // tuỳ chỉnh kích thước nhẫn (dựa trên finger width)
+    const RING_SCALE_MULTIPLIER = 2.3; // tuỳ chỉnh kích thước nhẫn (dựa trên finger width)
 
     // MediaPipe Hand Landmark indices
     const LM = {
@@ -33,6 +33,7 @@
     // ============================================================
     let renderer, scene, camera3D;
     let ringModel = null;
+    let fingerOccluder = null; // Khối vô hình che khuất phần nhẫn bị ngón tay che
     let modelLoaded = false;
     let modelLoadError = null;
     let handMissingCount = 0;
@@ -152,6 +153,19 @@
         const bottomFill = new THREE.DirectionalLight(0xffffff, 0.5);
         bottomFill.position.set(0, -3, 2);
         scene.add(bottomFill);
+
+        // ===== FINGER OCCLUDER (khối vô hình che khuất) =====
+        // Hình trụ mô phỏng ngón tay: bán kính 0.5 (sẽ scale động), cao 1, trục dọc theo Y
+        const occluderGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 1, false);
+        const occluderMat = new THREE.MeshBasicMaterial({
+            colorWrite: false,   // không vẽ màu — vô hình với mắt
+            depthWrite: true,    // vẫn ghi vào depth buffer
+            depthTest: true
+        });
+        fingerOccluder = new THREE.Mesh(occluderGeo, occluderMat);
+        fingerOccluder.renderOrder = 0; // render TRƯỚC nhẫn
+        fingerOccluder.visible = false;
+        scene.add(fingerOccluder);
     }
 
     // ============================================================
@@ -208,6 +222,7 @@
                 ringModel = group;
 
                 ringModel.visible = false;
+                ringModel.renderOrder = 1; // render SAU occluder
                 scene.add(ringModel);
 
                 // Enhance materials — fix mặt trong bị thấy + tăng sáng
@@ -343,7 +358,7 @@
                 Math.pow(mcp.x - middleMcp.x, 2) +
                 Math.pow(mcp.y - middleMcp.y, 2)
             );
-            const targetScale = fingerWidthEstimate * RING_SCALE_MULTIPLIER;
+            const targetScale = fingerWidthEstimate * 2 * RING_SCALE_MULTIPLIER;
 
             // ---- SMOOTHING ----
             if (firstFrame) {
@@ -363,6 +378,35 @@
             ringModel.scale.setScalar(smoothScale);
             ringModel.visible = true;
 
+            // ---- UPDATE FINGER OCCLUDER ----
+            // Occluder dùng x,y từ landmarks, nhưng z ép cố định gần z của nhẫn
+            // (không dùng landmark.z trực tiếp vì rất nhiễu, dễ làm occluder "nhảy"
+            //  ra trước mặt nhẫn và che khuất toàn bộ)
+            const dip = lm[LM.INDEX_DIP];
+
+            const segCenterNormX = (mcp.x + dip.x) / 2;
+            const segCenterNormY = (mcp.y + dip.y) / 2;
+
+            const OCCLUDER_Z_OFFSET = 0.04; // đẩy occluder nhích nhẹ về phía camera so với tâm nhẫn
+            const segCenter = new THREE.Vector3(
+                (segCenterNormX - 0.5) * 2,
+                -(segCenterNormY - 0.5) * 2,
+                smoothPos.z + OCCLUDER_Z_OFFSET
+            );
+
+            const segLength = Math.sqrt(
+                Math.pow((dip.x - mcp.x) * 2, 2) +
+                Math.pow((dip.y - mcp.y) * 2, 2)
+            ) * 1.3;
+
+            fingerOccluder.position.copy(segCenter);
+            fingerOccluder.quaternion.copy(smoothQuat); // dùng chung hướng với nhẫn
+            // Bán kính occluder nhỏ hơn nhẫn khá nhiều để chỉ che đúng phần bị ngón tay che thật
+            const occluderRadius = smoothScale * 0.6;
+            fingerOccluder.scale.set(occluderRadius, segLength, occluderRadius);
+            fingerOccluder.visible = true;
+
+
             setStatus('✓ Đã nhận diện bàn tay — Nhẫn đang hiển thị', 'success');
 
         } else {
@@ -370,6 +414,7 @@
             handMissingCount++;
             if (handMissingCount > HAND_GONE_FRAMES) {
                 ringModel.visible = false;
+                if (fingerOccluder) fingerOccluder.visible = false;
                 firstFrame = true;
                 setStatus('Đưa tay vào camera để thử nhẫn', 'ready');
             }
