@@ -2,7 +2,7 @@
 @using WebTrangSucNangCao.Models  
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
-
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,15 +28,14 @@
         </a>
 
         <ul class="nav-links">
-            <li><a asp-controller="Home" asp-action="Rings">RINGS</a></li>
-            <li><a asp-controller="Home" asp-action="Bracelets">BRACELETS</a></li>
-            <li><a asp-controller="Home" asp-action="Necklaces">NECKLACES</a></li>
-            <li><a asp-controller="Home" asp-action="Earrings">EARRINGS</a></li>
+            <li><a asp-controller="Home" asp-action="Rings">@Localizer["RINGS"]</a></li>
+            <li><a asp-controller="Home" asp-action="Bracelets">@Localizer["BRACELETS"]</a></li>
+            <li><a asp-controller="Home" asp-action="Necklaces">@Localizer["NECKLACES"]</a></li>
+            <li><a asp-controller="Home" asp-action="Earrings">@Localizer["EARRINGS"]</a></li>
         </ul>
-
         <div class="nav-right">
             <form asp-controller="Home" asp-action="Search" method="get" class="search-box">
-                <input type="text" name="searchTerm" placeholder="Search...">
+                <input type="text" name="searchTerm" placeholder="@Localizer["SearchPlaceholder"]">
                 <button type="submit" class="search-button">
                     <i class="fas fa-search"></i>
                 </button>
@@ -87,8 +86,27 @@
                 </i>
             </a>
 
-            <div class="lang-switch">
-                <span>Vi</span>
+            @using Microsoft.AspNetCore.Builder
+            @using Microsoft.AspNetCore.Localization
+            @using Microsoft.AspNetCore.Http.Features
+
+            @{
+                // Lấy thông tin ngôn ngữ hiện tại từ Request
+                var requestCulture = Context.Features.Get<IRequestCultureFeature>();
+                var currentCulture = requestCulture?.RequestCulture.Culture.Name ?? "en";
+                // Xác định ngôn ngữ mục tiêu khi click vào nút
+                var targetCulture = currentCulture == "en" ? "vi" : "en";
+                var buttonText = currentCulture == "en" ? "Vi" : "En";
+            }
+
+            <div class="lang-switch" style="cursor: pointer;">
+                <form asp-controller="Language" asp-action="Change" method="post" id="langForm" class="m-0 p-0">
+                    <input type="hidden" name="culture" value="@targetCulture" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    <a href="javascript:document.getElementById('langForm').submit();" style="text-decoration: none; color: inherit; font-weight: 600;">
+                        @buttonText
+                    </a>
+                </form>
             </div>
         </div>
 

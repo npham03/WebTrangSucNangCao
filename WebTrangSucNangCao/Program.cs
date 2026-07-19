@@ -25,8 +25,12 @@ builder.Services.AddSession(options => {
     options.Cookie.IsEssential = true;
 });
 
-builder.Services.AddControllersWithViews();
+// Cấu hình Đa ngôn ngữ (Localization)
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization();
 var app = builder.Build();
 
 // Sử dụng Session
@@ -86,6 +90,13 @@ if (Directory.Exists(bannersPath))
 
 
 app.UseRouting();
+// Thêm cấu hình ngôn ngữ mặc định và danh sách hỗ trợ
+var supportedCultures = new[] { "en", "vi" };
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(supportedCultures[0]) // Mặc định là tiếng Anh (en)
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+app.UseRequestLocalization(localizationOptions);
 app.UseAuthentication();
 app.UseAuthorization();
 

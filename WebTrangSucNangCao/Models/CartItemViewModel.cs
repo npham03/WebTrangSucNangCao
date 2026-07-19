@@ -11,12 +11,12 @@ namespace WebTrangSucNangCao.Models
     {
         // Info từ Variant
         public int VariantId { get; set; }
-        public string? VariantName { get; set; }
+        public string VariantName { get; set; }
 
         // Info từ Product
         public int ProductId { get; set; }
-        public string? NamePro { get; set; }
-        public string? ImagePro { get; set; }
+        public string NamePro { get; set; }
+        public string ImagePro { get; set; }
         public decimal Price { get; set; }
 
         // Info Giỏ hàng
