@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
 using WebTrangSucNangCao.Models; // Đổi lại đúng namespace Models của project
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp project
 {
@@ -63,6 +64,13 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [HttpPost]
         public ActionResult AddToCart(int VariantId)
         {
+            // === CHÈN THÊM ĐOẠN NÀY ĐỂ BẮT BUỘC ĐĂNG NHẬP ===
+            if (!User.Identity.IsAuthenticated)
+            {
+                return Json(new { success = false, redirectToLogin = true, message = "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng." });
+            }
+            // ==============================================
+            
             int finalQuantity = 0;
 
             if (User.Identity.IsAuthenticated)
@@ -131,6 +139,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [HttpPost]
         public ActionResult BuyNow(int VariantId)
         {
+            
             if (User.Identity.IsAuthenticated)
             {
                 string UserId = _userManager.GetUserId(User);
@@ -148,32 +157,12 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             }
             else
             {
-                List<CartItemViewModel> sessionCart = GetCartFromSession();
-                var sessionItem = sessionCart.FirstOrDefault(c => c.VariantId == VariantId);
-
-                if (sessionItem != null) { sessionItem.Quantity++; }
-                else
-                {
-                    var variant = _database.ProductVariants.Find(VariantId);
-                    if (variant != null)
-                    {
-                        var product = _database.Products.Find(variant.ProductId.Value);
-                        sessionCart.Add(new CartItemViewModel
-                        {
-                            VariantId = variant.VariantId,
-                            VariantName = variant.VariantName,
-                            ProductId = product.ProductId,
-                            NamePro = product.NamePro,
-                            ImagePro = product.ImagePro,
-                            Price = product.Price ?? 0,
-                            Quantity = 1
-                        });
-                    }
-                }
-                SaveCartToSession(sessionCart);
+                // THAY THẾ TOÀN BỘ PHẦN ELSE CŨ BẰNG 1 DÒNG NÀY:
+                return Json(new { success = false, redirectToLogin = true, message = "Vui lòng đăng nhập để thực hiện chức năng mua ngay." });
             }
 
-            return RedirectToAction("Checkout", "Cart");
+            // THAY THẾ LỆNH RETURN REDIRECT CŨ BẰNG DÒNG NÀY:
+            return Json(new { success = true, redirectUrl = Url.Action("Checkout", "Cart") });
         }
 
         // XÓA SẢN PHẨM (POST)
@@ -285,6 +274,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         }
 
         // CHECKOUT (GET) 
+        [Authorize]
         public async Task<ActionResult> Checkout()
         {
             var viewModel = new CheckoutViewModel();
