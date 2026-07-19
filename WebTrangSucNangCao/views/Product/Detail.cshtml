@@ -420,7 +420,7 @@
                 <p id="error-message">Vui lòng chọn 1 size</p>
 
                 <form asp-controller="Cart" asp-action="AddToCart" method="post" class="cart-form" id="addToCartForm">
-                    <input type="hidden" name="variantID" value="@defaultVariantId" class="selected-variant-input" />
+                    <input type="hidden" name="variantId" value="@defaultVariantId" class="selected-variant-input" />
                     <button type="submit" class="btn btn-add-to-cart">THÊM VÀO GIỎ</button>
                 </form>
 
@@ -563,11 +563,11 @@
                 if (errorMessage) errorMessage.style.display = 'none';
             }
 
-            // 4. Xử lý Submit Form
+            // 4. Xử lý Submit Form THÊM VÀO GIỎ
             var addToCartForm = document.getElementById('addToCartForm');
             if (addToCartForm) {
                 addToCartForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
+                    e.preventDefault(); 
 
                     var hiddenInput = this.querySelector('.selected-variant-input');
                     if (hiddenInput.value === "") {
@@ -580,32 +580,80 @@
                         method: 'POST',
                         body: formData
                     })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.getElementById('modalProductName').innerText = data.productName;
-                                document.getElementById('modalCartQty').innerText = data.quantity;
-                                var cleanPath = data.productImage.replace('~', '');
-                                document.getElementById('modalProductImg').src = cleanPath;
-                                var myModal = new bootstrap.Modal(document.getElementById('addedToCartModal'));
-                                myModal.show();
-                            } else {
-                                alert("Lỗi! Vui lòng thử lại.");
-                            }
-                        })
-                        .catch(error => console.error('Error:', error));
+                    .then(response => {
+                        // KIỂM TRA ĐƯỢC THÊM: Nếu Server ép chuyển hướng (do [Authorize] chặn) hoặc trả về HTML
+                        if (response.redirected || (response.headers.get("content-type") && response.headers.get("content-type").indexOf("text/html") !== -1)) {
+                            window.location.href = '/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname);
+                            return;
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data) return;
+                        console.log("AddToCart Response:", data);
+
+                        if (data.redirectToLogin === true) {
+                            window.location.href = '/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname);
+                            return;
+                        }
+
+                        if (data.success) {
+                            document.getElementById('modalProductName').innerText = data.productName;
+                            document.getElementById('modalCartQty').innerText = data.quantity;
+                            var cleanPath = data.productImage ? data.productImage.replace('~', '') : '';
+                            document.getElementById('modalProductImg').src = cleanPath;
+
+                            var myModal = new bootstrap.Modal(document.getElementById('addedToCartModal'));
+                            myModal.show();
+                        } else {
+                            alert(data.message || "Lỗi! Vui lòng thử lại.");
+                        }
+                    })
+                    .catch(error => console.error('Error AddToCart:', error));
                 });
             }
-
-            // Xử lý form Mua Ngay
+            
+            // 5. Xử lý Form MUA NGAY
             document.querySelectorAll('.cart-form').forEach(form => {
                 if (form.id !== 'addToCartForm') {
                     form.addEventListener('submit', function (e) {
+                        e.preventDefault(); 
+
                         var hiddenInput = this.querySelector('.selected-variant-input');
                         if (hiddenInput.value === "") {
-                            e.preventDefault();
                             errorMessage.style.display = 'block';
+                            return;
                         }
+
+                        var formData = new FormData(this);
+                        fetch(this.action, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => {
+                            // Nếu server trả về trang HTML (Chuyển hướng hoặc lỗi)
+                            if (response.headers.get("content-type") && response.headers.get("content-type").indexOf("text/html") !== -1) {
+                                window.location.href = '/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname);
+                                return;
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (!data) return;
+                            console.log("BuyNow Response:", data);
+
+                            if (data.redirectToLogin === true) {
+                                window.location.href = '/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname);
+                                return;
+                            }
+
+                            if (data.success) {
+                                window.location.href = data.redirectUrl;
+                            } else {
+                                alert(data.message || "Có lỗi xảy ra khi thực hiện Mua ngay.");
+                            }
+                        })
+                        .catch(error => console.error('Error BuyNow:', error));
                     });
                 }
             });
