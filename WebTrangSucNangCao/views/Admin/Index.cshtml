@@ -149,7 +149,7 @@
                         <button type="submit" class="btn btn-dark btn-sm w-100 fw-bold">Thêm Slider</button>
                     </div>
                     <div class="col-12">
-                        <input asp-for="NewSlider.Link" class="form-control form-control-sm" placeholder="Link khi bấm (VD: /Home/Rings)" />
+                       <input asp-for="NewSlider.Link" class="form-control form-control-sm" placeholder="Link khi bấm (VD: /Home/Rings)" />
                     </div>
                 </form>
 
@@ -167,7 +167,7 @@
                             {
                                 <tr>
                                     <td>
-                                        <img src="@Url.Content(Url.NormalizeImagePath(slider.ImagePath))" style="height: 40px; width: auto; border-radius: 4px;" />
+                                        <img src="@Url.Content(Url.NormalizeImagePath(slider.ImagePath))" style="height: 40px; width: auto;" />
                                     </td>
                                     <td class="small text-truncate" style="max-width: 140px;">@slider.Link</td>
                                     <td class="text-center">

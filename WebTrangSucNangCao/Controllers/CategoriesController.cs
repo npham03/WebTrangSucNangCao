@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
-using WebApplication1.Models;
 using WebTrangSucNangCao.Models;
 
 namespace WebApplication1.Controllers

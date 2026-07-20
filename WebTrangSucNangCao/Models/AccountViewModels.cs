@@ -9,7 +9,9 @@ namespace WebTrangSucNangCao.Models
     {
         [Required]
         [Display(Name = "Email")]
-        public string Email { get; set; }
+        public string? Email { get; set; }
+        public string? Name { get; set; } = string.Empty;
+        public string? LastName { get; set; } = string.Empty;
     }
 
     public class ExternalLoginListViewModel

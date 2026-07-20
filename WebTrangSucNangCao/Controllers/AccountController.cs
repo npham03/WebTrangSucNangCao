@@ -333,6 +333,13 @@ namespace WebTrangSucNangCao.Controllers // Nhớ đổi tên namespace theo pro
             var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
             if (result.Succeeded)
             {
+                // THÊM VÀO: Đồng bộ giỏ hàng từ Session vào DB khi đăng nhập thành công qua Google/Facebook
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                if (!string.IsNullOrEmpty(email))
+                {
+                    await MergeSessionCartToDbAsync(email);
+                }
+
                 return RedirectToLocal(returnUrl);
             }
             if (result.IsLockedOut)
@@ -341,9 +348,51 @@ namespace WebTrangSucNangCao.Controllers // Nhớ đổi tên namespace theo pro
             }
             else
             {
+                // Nếu người dùng lần đầu đăng nhập bằng Google/Facebook -> Tự động đăng ký & liên kết luôn
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
+                if (!string.IsNullOrEmpty(email))
+                {
+                    // 1. Kiểm tra xem email này đã tồn tại trong DB chưa
+                    var user = await _userManager.FindByEmailAsync(email);
+
+                    if (user == null)
+                    {
+                        // 2. Nếu chưa có -> Tạo tài khoản mới với thông tin từ Google/Facebook
+                        var name = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? info.Principal.FindFirstValue(ClaimTypes.Name);
+                        var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname);
+
+                        user = new ApplicationUser 
+                        { 
+                            UserName = email, 
+                            Email = email,
+                            // Thêm Name/LastName nếu ApplicationUser của bạn có các trường này:
+                            // Name = name,
+                            // LastName = lastName
+                        };
+
+                        var createResult = await _userManager.CreateAsync(user);
+                        if (!createResult.Succeeded)
+                        {
+                            return View("Login");
+                        }
+                    }
+
+                    // 3. Liên kết phương thức đăng nhập (Google/Facebook) vào tài khoản
+                    await _userManager.AddLoginAsync(user, info);
+
+                    // 4. Đăng nhập người dùng vào hệ thống
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+
+                    // 5. Đồng bộ giỏ hàng từ Session vào DB
+                    await MergeSessionCartToDbAsync(email);
+
+                    return RedirectToLocal(returnUrl);
+                }
+
+                // Trường hợp hy hữu không lấy được Email từ Google/Facebook thì mới hiện View xác nhận cũ
                 ViewBag.ReturnUrl = returnUrl;
                 ViewBag.LoginProvider = info.LoginProvider;
-                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
                 return View("ExternalLoginConfirmation", new ExternalLoginConfirmationViewModel { Email = email });
             }
         }
@@ -367,14 +416,23 @@ namespace WebTrangSucNangCao.Controllers // Nhớ đổi tên namespace theo pro
                 {
                     return View("ExternalLoginFailure");
                 }
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+                var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Name = model.Name, LastName = model.LastName };
                 var result = await _userManager.CreateAsync(user);
                 if (result.Succeeded)
                 {
                     result = await _userManager.AddLoginAsync(user, info);
                     if (result.Succeeded)
                     {
+                        // THÊM VÀO: Tự động xác thực email và gán quyền Customer đồng bộ với luồng Register
+                        string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                        await _userManager.ConfirmEmailAsync(user, code);
+                        await _userManager.AddToRoleAsync(user, "Customer");
+
                         await _signInManager.SignInAsync(user, isPersistent: false);
+
+                        // Đồng bộ giỏ hàng
+                        await MergeSessionCartToDbAsync(model.Email);
+
                         return RedirectToLocal(returnUrl);
                     }
                 }
@@ -423,5 +481,44 @@ namespace WebTrangSucNangCao.Controllers // Nhớ đổi tên namespace theo pro
             return RedirectToAction("Index", "Home");
         }
         #endregion
+
+        // Hàm phụ dùng chung để tối ưu hóa việc đồng bộ giỏ hàng, tránh lặp code
+        private async Task MergeSessionCartToDbAsync(string email)
+        {
+            var sessionCartStr = HttpContext.Session.GetString("Cart");
+            if (!string.IsNullOrEmpty(sessionCartStr))
+            {
+                var sessionCart = JsonSerializer.Deserialize<List<CartItemViewModel>>(sessionCartStr);
+                if (sessionCart != null && sessionCart.Any())
+                {
+                    var user = await _userManager.FindByEmailAsync(email);
+                    if (user != null)
+                    {
+                        string userId = user.Id;
+                        var dbCart = _database.UserCarts.Where(c => c.UserId == userId).ToList();
+
+                        foreach (var sessionItem in sessionCart)
+                        {
+                            var dbItem = dbCart.FirstOrDefault(c => c.VariantId == sessionItem.VariantId);
+                            if (dbItem != null)
+                            {
+                                dbItem.Quantity = (dbItem.Quantity ?? 0) + sessionItem.Quantity;
+                            }
+                            else
+                            {
+                                _database.UserCarts.Add(new UserCart
+                                {
+                                    UserId = userId,
+                                    VariantId = sessionItem.VariantId,
+                                    Quantity = sessionItem.Quantity
+                                });
+                            }
+                        }
+                        await _database.SaveChangesAsync();
+                        HttpContext.Session.Remove("Cart");
+                    }
+                }
+            }
+        }
     }
 }
