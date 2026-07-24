@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
 using WebTrangSucNangCao.Models; // Đổi lại đúng namespace Models của project
-using Microsoft.AspNetCore.Authorization;
 
 namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp project
 {
@@ -62,15 +61,8 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
 
         // THÊM VÀO GIỎ (POST)
         [HttpPost]
-        [Authorize]
         public ActionResult AddToCart(int VariantId)
         {
-            // CHÈN KIỂM TRA ĐĂNG NHẬP: Nếu chưa đăng nhập, trả về tín hiệu để JS chuyển hướng thẳng
-            if (!User.Identity.IsAuthenticated)
-            {
-                return Json(new { redirectToLogin = true });
-            }
-
             int finalQuantity = 0;
 
             if (User.Identity.IsAuthenticated)
@@ -136,34 +128,52 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             });
         }
 
-// MUA NGAY (POST)
         [HttpPost]
         public ActionResult BuyNow(int VariantId)
         {
-            // CHÈN KIỂM TRA ĐĂNG NHẬP: Trả về tín hiệu bắt buộc đăng nhập
-            if (!User.Identity.IsAuthenticated)
+            if (User.Identity.IsAuthenticated)
             {
-                return Json(new { redirectToLogin = true });
-            }
+                string UserId = _userManager.GetUserId(User);
+                var dbItem = _database.UserCarts.FirstOrDefault(c => c.UserId == UserId && c.VariantId == VariantId);
 
-            string UserId = _userManager.GetUserId(User);
-            var dbItem = _database.UserCarts.FirstOrDefault(c => c.UserId == UserId && c.VariantId == VariantId);
-
-            if (dbItem != null)
-            {
-                dbItem.Quantity = (dbItem.Quantity ?? 0) + 1;
+                if (dbItem != null)
+                {
+                    dbItem.Quantity = (dbItem.Quantity ?? 0) + 1;
+                }
+                else
+                {
+                    _database.UserCarts.Add(new UserCart { UserId = UserId, VariantId = VariantId, Quantity = 1 });
+                }
+                _database.SaveChanges();
             }
             else
             {
-                _database.UserCarts.Add(new UserCart { UserId = UserId, VariantId = VariantId, Quantity = 1 });
-            }
-            _database.SaveChanges();
+                List<CartItemViewModel> sessionCart = GetCartFromSession();
+                var sessionItem = sessionCart.FirstOrDefault(c => c.VariantId == VariantId);
 
-            return Json(new
-            {
-                success = true,
-                redirectUrl = Url.Action("Checkout", "Cart")
-            });
+                if (sessionItem != null) { sessionItem.Quantity++; }
+                else
+                {
+                    var variant = _database.ProductVariants.Find(VariantId);
+                    if (variant != null)
+                    {
+                        var product = _database.Products.Find(variant.ProductId.Value);
+                        sessionCart.Add(new CartItemViewModel
+                        {
+                            VariantId = variant.VariantId,
+                            VariantName = variant.VariantName,
+                            ProductId = product.ProductId,
+                            NamePro = product.NamePro,
+                            ImagePro = product.ImagePro,
+                            Price = product.Price ?? 0,
+                            Quantity = 1
+                        });
+                    }
+                }
+                SaveCartToSession(sessionCart);
+            }
+
+            return RedirectToAction("Checkout", "Cart");
         }
 
         // XÓA SẢN PHẨM (POST)
