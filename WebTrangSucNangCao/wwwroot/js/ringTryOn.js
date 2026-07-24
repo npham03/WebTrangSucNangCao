@@ -14,7 +14,7 @@
     const SMOOTHING_FACTOR = 0.35; // 0 = no smooth, 1 = freeze (position/scale)
     const ROTATION_SMOOTHING = 0.3; // slerp factor cho quaternion
     const HAND_GONE_FRAMES = 8;    // số frame không thấy tay thì ẩn model
-    const RING_SCALE_MULTIPLIER = 2.3; // tuỳ chỉnh kích thước nhẫn (dựa trên finger width)
+    const RING_SCALE_MULTIPLIER = 2.1; // tuỳ chỉnh kích thước nhẫn (dựa trên finger width)
 
     // MediaPipe Hand Landmark indices
     const LM = {
