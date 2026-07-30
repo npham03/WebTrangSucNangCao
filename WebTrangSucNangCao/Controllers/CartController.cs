@@ -321,6 +321,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                     string fullName = $"{user.LastName} {user.Name}".Trim();
                     viewModel.Name = string.IsNullOrEmpty(fullName) ? user.UserName : fullName;
                     viewModel.Phone = user.PhoneNumber;
+                    viewModel.Email = user.Email ?? user.UserName;
                     
                     // Nếu user có sẵn địa chỉ từ trước, ta gán tạm vào StreetAddress để khách chỉnh sửa
                     viewModel.StreetAddress = user.Address;
@@ -368,9 +369,12 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 }
             }
 
-            // 1. TẠO HOẶC LẤY KHÁCH HÀNG
-            string emailCus = User.Identity.IsAuthenticated ? User.Identity.Name : "guest@email.com";
-            Customer orderCustomer = _database.Customers.FirstOrDefault(c => c.EmailCus == emailCus);
+            // 1. TẠO HOẶC LẤY KHÁCH HÀNG (DỰA TRÊN EMAIL CHUẨN ĐƯỢC NHẬP/XÁC THỰC)
+            string emailCus = (User.Identity.IsAuthenticated && !string.IsNullOrEmpty(User.Identity.Name)) 
+                ? User.Identity.Name 
+                : viewModel.Email?.Trim();
+
+            Customer orderCustomer = await _database.Customers.FirstOrDefaultAsync(c => c.EmailCus == emailCus);
             if (orderCustomer == null)
             {
                 orderCustomer = new Customer
@@ -380,13 +384,13 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                     EmailCus = emailCus
                 };
                 _database.Customers.Add(orderCustomer);
-                _database.SaveChanges();
+                await _database.SaveChangesAsync();
             }
             else
             {
                 orderCustomer.NameCus = viewModel.Name;
                 orderCustomer.PhoneCus = viewModel.Phone;
-                _database.SaveChanges();
+                await _database.SaveChangesAsync();
             }
 
             // 2. TẠO ĐƠN HÀNG (OrderPro)
