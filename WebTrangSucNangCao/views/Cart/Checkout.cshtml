@@ -40,22 +40,39 @@
                         <label class="fw-bold">Tỉnh/Thành phố</label>
                         <select asp-for="Province" id="Province" class="form-select">
                             <option value="">-- Chọn Tỉnh/Thành --</option>
+                            <option value="TP. Hồ Chí Minh" data-code="79">TP. Hồ Chí Minh</option>
+                            <option value="Hà Nội" data-code="01">Hà Nội</option>
+                            <option value="Đà Nẵng" data-code="48">Đà Nẵng</option>
+                            <option value="Bình Dương" data-code="74">Bình Dương</option>
+                            <option value="Đồng Nai" data-code="75">Đồng Nai</option>
+                            <option value="Khác">Tỉnh/Thành khác</option>
                         </select>
                         <span asp-validation-for="Province" class="text-danger"></span>
                     </div>
 
                     <div class="col-md-4 form-group mb-3">
                         <label class="fw-bold">Quận/Huyện</label>
-                        <select asp-for="District" id="District" class="form-select" disabled>
+                        <select asp-for="District" id="District" class="form-select">
                             <option value="">-- Chọn Quận/Huyện --</option>
+                            <option value="Quận 1">Quận 1</option>
+                            <option value="Quận 3">Quận 3</option>
+                            <option value="Quận Tân Bình">Quận Tân Bình</option>
+                            <option value="Quận Bình Thạnh">Quận Bình Thạnh</option>
+                            <option value="Quận 7">Quận 7</option>
+                            <option value="Khác">Quận/Huyện khác</option>
                         </select>
                         <span asp-validation-for="District" class="text-danger"></span>
                     </div>
 
                     <div class="col-md-4 form-group mb-3">
                         <label class="fw-bold">Phường/Xã</label>
-                        <select asp-for="Ward" id="Ward" class="form-select" disabled>
+                        <select asp-for="Ward" id="Ward" class="form-select">
                             <option value="">-- Chọn Phường/Xã --</option>
+                            <option value="Phường Bến Nghé">Phường Bến Nghé</option>
+                            <option value="Phường Bến Thành">Phường Bến Thành</option>
+                            <option value="Phường 1">Phường 1</option>
+                            <option value="Phường 2">Phường 2</option>
+                            <option value="Khác">Phường/Xã khác</option>
                         </select>
                         <span asp-validation-for="Ward" class="text-danger"></span>
                     </div>
@@ -226,21 +243,15 @@
                 const provinceCode = selectedOption.data('code');
                 const provinceName = selectedOption.val();
 
-                districtSelect.empty().append('<option value="">-- Chọn Quận/Huyện --</option>').prop('disabled', true);
-                wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>').prop('disabled', true);
-
                 if (provinceCode) {
+                    districtSelect.empty().append('<option value="">-- Chọn Quận/Huyện --</option>');
+                    wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>');
+                    
                     // Gọi API provinces lấy danh sách Quận Huyện
                     $.getJSON(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`, function (data) {
                         $.each(data.districts, function (index, district) {
                             districtSelect.append(`<option value="${district.name}" data-code="${district.code}">${district.name}</option>`);
                         });
-                        districtSelect.prop('disabled', false);
-
-                        let selectedDistrict = "@Model.District";
-                        if(selectedDistrict && provinceSelect.val() === "@Model.Province") {
-                            districtSelect.val(selectedDistrict).trigger('change');
-                        }
                     });
 
                     // Gọi API của hệ thống để cập nhật phí vận chuyển theo tỉnh thành mới

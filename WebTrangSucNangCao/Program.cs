@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebTrangSucNangCao.Models; // Sửa theo namespace của bạn
+using WebTrangSucNangCao.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Đăng ký dịch vụ Gửi Email Resend API
+builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
 
 // Cấu hình Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
