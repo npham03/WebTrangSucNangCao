@@ -14,7 +14,7 @@
     const SMOOTHING_FACTOR = 0.35; // 0 = no smooth, 1 = freeze (position/scale)
     const ROTATION_SMOOTHING = 0.3; // slerp factor cho quaternion
     const HAND_GONE_FRAMES = 8;    // số frame không thấy tay thì ẩn model
-    const RING_SCALE_MULTIPLIER = 2.1; // tuỳ chỉnh kích thước nhẫn (dựa trên finger width)
+    const RING_SCALE_MULTIPLIER = 0.58; // tuỳ chỉnh kích thước nhẫn (dựa trên độ dài đốt ngón tay mcp->pip)
 
     // MediaPipe Hand Landmark indices
     const LM = {
@@ -32,6 +32,7 @@
     // STATE
     // ============================================================
     let renderer, scene, camera3D;
+    let pmremGenerator = null, envTexture = null;
     let ringModel = null;
     let fingerOccluder = null; // Khối vô hình che khuất phần nhẫn bị ngón tay che
     let modelLoaded = false;
@@ -119,6 +120,13 @@
 
         // Scene
         scene = new THREE.Scene();
+
+        // Studio environment map giúp vật liệu kim loại phản chiếu sáng tự nhiên
+        if (typeof THREE.RoomEnvironment === 'function' && typeof THREE.PMREMGenerator === 'function') {
+            pmremGenerator = new THREE.PMREMGenerator(renderer);
+            envTexture = pmremGenerator.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+            scene.environment = envTexture;
+        }
 
         // Camera — orthographic giúp dễ map tọa độ 2D->3D
         camera3D = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1000);
@@ -296,6 +304,12 @@
     // MEDIAPIPE SETUP
     // ============================================================
     function setupMediaPipe() {
+        if (typeof Hands === 'undefined') {
+            showToast('Không thể tải thư viện nhận diện bàn tay MediaPipe.', 'error', 8000);
+            setStatus('Lỗi tải MediaPipe', 'error');
+            return;
+        }
+
         mediapipeHands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
@@ -326,39 +340,35 @@
             const lm = results.multiHandLandmarks[0];
             handMissingCount = 0;
 
+            const aspect = (videoEl.videoWidth || 640) / (videoEl.videoHeight || 480);
+
             // ---- POSITION: Giữa MCP và PIP ngón trỏ ----
             const mcp = lm[LM.INDEX_MCP];
             const pip = lm[LM.INDEX_PIP];
 
-            // Vị trí đeo nhẫn: lệch về phía PIP 60% (gần đốt ngón hơn)
-            // thay vì trung điểm 50-50, để nhẫn nằm đúng vị trí đeo
-            const t = 0.6;
+            // Vị trí đeo nhẫn: lệch về phía PIP 55% (vừa vặn phần lóng tay đeo nhẫn)
+            const t = 0.55;
             const ringPosNorm = {
                 x: mcp.x + (pip.x - mcp.x) * t,
                 y: mcp.y + (pip.y - mcp.y) * t,
                 z: mcp.z + (pip.z - mcp.z) * t
             };
 
-            // Convert normalized coords (0-1) → Three.js orthographic coords (-1 to 1)
-            // MediaPipe: x(0=left,1=right) y(0=top,1=bottom) — mirrored
+            // Convert normalized coords (0-1) → Three.js orthographic coords (có nhân aspect cho X)
             const targetPos = new THREE.Vector3(
-                (ringPosNorm.x - 0.5) * 2,   // → [-1, 1]
-                -(ringPosNorm.y - 0.5) * 2,   // → [-1, 1], flip Y
+                (ringPosNorm.x - 0.5) * 2 * aspect,
+                -(ringPosNorm.y - 0.5) * 2,
                 0
             );
 
             // ---- ROTATION: Tính quaternion từ 3 trục ----
-            const targetQuat = computeRingRotation(lm);
+            const targetQuat = computeRingRotation(lm, aspect);
 
-            // ---- SCALE: Dựa trên BỀ NGANG ngón tay (không phải chiều dài) ----
-            // Ước lượng finger width = khoảng cách INDEX_MCP ↔ MIDDLE_MCP
-            // (bề ngang 1 ngón ≈ khoảng cách giữa 2 gốc ngón liền kề)
-            const middleMcp = lm[LM.MIDDLE_MCP];
-            const fingerWidthEstimate = Math.sqrt(
-                Math.pow(mcp.x - middleMcp.x, 2) +
-                Math.pow(mcp.y - middleMcp.y, 2)
-            );
-            const targetScale = fingerWidthEstimate * 2 * RING_SCALE_MULTIPLIER;
+            // ---- SCALE: Tính theo chiều dài đốt ngón tay (ổn định hơn bề ngang khi xoay tay) ----
+            const mcp3 = vec3FromLM(mcp, aspect);
+            const pip3 = vec3FromLM(pip, aspect);
+            const phalanxLength = pip3.distanceTo(mcp3);
+            const targetScale = phalanxLength * RING_SCALE_MULTIPLIER;
 
             // ---- SMOOTHING ----
             if (firstFrame) {
@@ -379,33 +389,20 @@
             ringModel.visible = true;
 
             // ---- UPDATE FINGER OCCLUDER ----
-            // Occluder dùng x,y từ landmarks, nhưng z ép cố định gần z của nhẫn
-            // (không dùng landmark.z trực tiếp vì rất nhiễu, dễ làm occluder "nhảy"
-            //  ra trước mặt nhẫn và che khuất toàn bộ)
-            const dip = lm[LM.INDEX_DIP];
-
-            const segCenterNormX = (mcp.x + dip.x) / 2;
-            const segCenterNormY = (mcp.y + dip.y) / 2;
-
-            const OCCLUDER_Z_OFFSET = 0.04; // đẩy occluder nhích nhẹ về phía camera so với tâm nhẫn
-            const segCenter = new THREE.Vector3(
-                (segCenterNormX - 0.5) * 2,
-                -(segCenterNormY - 0.5) * 2,
+            // Đẩy occluder lùi nhẹ về phía sau (-Z, ra xa camera) so với tâm nhẫn
+            // để chỉ che đúng phần mặt sau của nhẫn mà không che mặt trước nhẫn
+            const OCCLUDER_Z_OFFSET = -0.008;
+            fingerOccluder.position.set(
+                smoothPos.x,
+                smoothPos.y,
                 smoothPos.z + OCCLUDER_Z_OFFSET
             );
-
-            const segLength = Math.sqrt(
-                Math.pow((dip.x - mcp.x) * 2, 2) +
-                Math.pow((dip.y - mcp.y) * 2, 2)
-            ) * 1.3;
-
-            fingerOccluder.position.copy(segCenter);
-            fingerOccluder.quaternion.copy(smoothQuat); // dùng chung hướng với nhẫn
-            // Bán kính occluder nhỏ hơn nhẫn khá nhiều để chỉ che đúng phần bị ngón tay che thật
-            const occluderRadius = smoothScale * 0.6;
+            fingerOccluder.quaternion.copy(smoothQuat);
+            // Bán kính occluder vừa khít lỗ lòng trong nhẫn (~37% kích thước tổng của nhẫn)
+            const occluderRadius = smoothScale * 0.37;
+            const segLength = phalanxLength * 1.5;
             fingerOccluder.scale.set(occluderRadius, segLength, occluderRadius);
             fingerOccluder.visible = true;
-
 
             setStatus('✓ Đã nhận diện bàn tay — Nhẫn đang hiển thị', 'success');
 
@@ -426,40 +423,55 @@
     // ============================================================
     // COMPUTE RING ROTATION — Tính quaternion 3D từ hand landmarks
     // ============================================================
-    function computeRingRotation(lm) {
-        // Lấy 3D positions (MediaPipe trả z tương đối)
-        const mcp3 = vec3FromLM(lm[LM.INDEX_MCP]);
-        const pip3 = vec3FromLM(lm[LM.INDEX_PIP]);
-        const dip3 = vec3FromLM(lm[LM.INDEX_DIP]);
-        const wrist3 = vec3FromLM(lm[LM.WRIST]);
-        const middleMCP3 = vec3FromLM(lm[LM.MIDDLE_MCP]);
+    function computeRingRotation(lm, aspect) {
+        const mcp3 = vec3FromLM(lm[LM.INDEX_MCP], aspect);
+        const pip3 = vec3FromLM(lm[LM.INDEX_PIP], aspect);
+        const middleMCP3 = vec3FromLM(lm[LM.MIDDLE_MCP], aspect);
 
         // ---- Trục Y (up) = hướng ngón tay: MCP → PIP ----
-        const axisY = new THREE.Vector3().subVectors(pip3, mcp3).normalize();
+        const axisY = new THREE.Vector3().subVectors(pip3, mcp3);
+        if (axisY.lengthSq() < 1e-6) {
+            axisY.set(0, 1, 0);
+        } else {
+            axisY.normalize();
+        }
 
         // ---- Trục tham chiếu = hướng ngang bàn tay: INDEX_MCP → MIDDLE_MCP ----
-        const handRight = new THREE.Vector3().subVectors(middleMCP3, mcp3).normalize();
+        const handRight = new THREE.Vector3().subVectors(middleMCP3, mcp3);
+        if (handRight.lengthSq() < 1e-6) {
+            handRight.set(1, 0, 0);
+        } else {
+            handRight.normalize();
+        }
 
         // ---- Trục Z (forward/out of finger) = cross(Y, handRight) ----
-        const axisZ = new THREE.Vector3().crossVectors(axisY, handRight).normalize();
+        const axisZ = new THREE.Vector3().crossVectors(axisY, handRight);
+        if (axisZ.lengthSq() < 1e-6) {
+            axisZ.set(0, 0, 1);
+        } else {
+            axisZ.normalize();
+        }
 
         // ---- Trục X (right) = cross(Y, Z) — đảm bảo orthogonal ----
-        const axisX = new THREE.Vector3().crossVectors(axisY, axisZ).normalize();
+        const axisX = new THREE.Vector3().crossVectors(axisY, axisZ);
+        if (axisX.lengthSq() < 1e-6) {
+            axisX.set(1, 0, 0);
+        } else {
+            axisX.normalize();
+        }
 
         // Xây rotation matrix 3x3 → Matrix4
         const rotMatrix = new THREE.Matrix4();
         rotMatrix.makeBasis(axisX, axisY, axisZ);
 
-        const quat = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
-
-        return quat;
+        return new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
     }
 
     // Helper: Convert MediaPipe landmark → Three.Vector3
     // MediaPipe: x(0-1,left-right) y(0-1,top-bottom) z(negative=towards camera)
-    function vec3FromLM(landmark) {
+    function vec3FromLM(landmark, aspect = 1) {
         return new THREE.Vector3(
-            (landmark.x - 0.5) * 2,
+            (landmark.x - 0.5) * 2 * aspect,
             -(landmark.y - 0.5) * 2,
             -landmark.z * 2           // z scale factor
         );
@@ -490,6 +502,13 @@
     // ============================================================
     function start() {
         if (isRunning) return;
+
+        if (!mediapipeHands || typeof Camera === 'undefined') {
+            showToast('Module camera hoặc nhận diện bàn tay chưa sẵn sàng. Vui lòng tải lại trang.', 'error', 8000);
+            setStatus('Lỗi khởi tạo camera/MediaPipe', 'error');
+            return;
+        }
+
         isRunning = true;
         firstFrame = true;
         handMissingCount = 999;
@@ -539,6 +558,9 @@
         if (ringModel) {
             ringModel.visible = false;
         }
+        if (fingerOccluder) {
+            fingerOccluder.visible = false;
+        }
 
         firstFrame = true;
         setStatus('', 'idle');
@@ -546,6 +568,15 @@
 
     function dispose() {
         stop();
+
+        if (envTexture) {
+            envTexture.dispose();
+            envTexture = null;
+        }
+        if (pmremGenerator) {
+            pmremGenerator.dispose();
+            pmremGenerator = null;
+        }
 
         if (renderer) {
             renderer.dispose();
@@ -569,6 +600,7 @@
         }
 
         ringModel = null;
+        fingerOccluder = null;
         modelLoaded = false;
     }
 

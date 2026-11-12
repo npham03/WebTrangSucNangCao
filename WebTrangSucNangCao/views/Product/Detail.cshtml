@@ -585,7 +585,7 @@
                             if (data.success) {
                                 document.getElementById('modalProductName').innerText = data.productName;
                                 document.getElementById('modalCartQty').innerText = data.quantity;
-                                var cleanPath = data.productImage.replace('~', '');
+                                var cleanPath = (data.productImage || '/images/placeholder.png').replace('~', '');
                                 document.getElementById('modalProductImg').src = cleanPath;
                                 var myModal = new bootstrap.Modal(document.getElementById('addedToCartModal'));
                                 myModal.show();
@@ -631,10 +631,11 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
         // Gắn vào window để ringTryOn.js (non-module) truy cập được
         // ES module namespace là frozen/read-only → dùng Proxy để wrap
-        const extras = { GLTFLoader };
+        const extras = { GLTFLoader, RoomEnvironment };
         window.THREE = new Proxy(THREE, {
             get(target, prop) {
                 return prop in extras ? extras[prop] : target[prop];
@@ -643,7 +644,7 @@
 
         // Load ringTryOn.js sau khi THREE sẵn sàng
         const s = document.createElement('script');
-        s.src = '/js/ringTryOn.js';
+        s.src = '/js/ringTryOn.js?v=2';
         s.onload = function() {
             RingTryOn.init();
 

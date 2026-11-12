@@ -426,11 +426,8 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 var variantInDb = _database.ProductVariants.Find(item.VariantId);
                 if (variantInDb != null)
                 {
-                    variantInDb.Stock = variantInDb.Stock - item.Quantity;
-                    if (variantInDb.Stock < 0)
-                    {
-                        variantInDb.Stock = 0;
-                    }
+                    int currentStock = variantInDb.Stock ?? 0;
+                    variantInDb.Stock = Math.Max(0, currentStock - item.Quantity);
                 }
             }
             _database.SaveChanges();
