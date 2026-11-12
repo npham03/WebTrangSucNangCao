@@ -558,7 +558,7 @@
                             <span class="ar-topbar__badge">AR 3D Try-On</span>
                             <span class="ar-topbar__title">@Model.Product.NamePro</span>
                         </div>
-                        <button type="button" id="btnStopAR" class="ar-close-btn" title="??ng (Esc)">
+                        <button type="button" id="btnStopAR" class="ar-close-btn" title="Đóng (Esc)">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -566,7 +566,7 @@
                     @* Loading overlay *@
                     <div id="arLoading" class="ar-loading">
                         <div class="ar-loading__spinner"></div>
-                        <div class="ar-loading__text">?ang t?i model 3D...</div>
+                        <div class="ar-loading__text">Đang tải model 3D...</div>
                     </div>
 
                     @* Bottom HUD *@
@@ -574,12 +574,12 @@
                         <div id="arStatus" class="ar-status" style="display:none;"></div>
                         <div class="ar-controls-panel">
                             <div class="ar-finger-group">
-                                <button type="button" class="ar-finger-btn active" data-finger="index">Ng?n tr?</button>
-                                <button type="button" class="ar-finger-btn" data-finger="middle">Ng?n gi?a</button>
-                                <button type="button" class="ar-finger-btn" data-finger="ring">Ng?n ?p ?t</button>
+                                <button type="button" class="ar-finger-btn active" data-finger="index">Ngón trỏ</button>
+                                <button type="button" class="ar-finger-btn" data-finger="middle">Ngón giữa</button>
+                                <button type="button" class="ar-finger-btn" data-finger="ring">Ngón áp út</button>
                             </div>
                             <div class="ar-size-control">
-                                <span>C? nh?n:</span>
+                                <span>Cỡ nhẫn:</span>
                                 <input type="range" id="arSizeSlider" min="0.32" max="0.58" step="0.01" value="0.43" />
                             </div>
                         </div>
