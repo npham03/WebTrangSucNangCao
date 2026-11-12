@@ -222,15 +222,25 @@
         box-shadow: 0 4px 20px rgba(15,52,96,0.4);
     }
 
+    /* === FULLSCREEN AR POPUP MODAL === */
     #arCameraContainer {
-        position: relative;
-        width: 100%;
-        max-width: 500px;
-        margin-top: 15px;
-        border-radius: 12px;
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1000000;
+        background: #09090b;
+        display: none;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        background: #000;
+    }
+    #arMediaWrapper {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        overflow: hidden;
     }
     #arVideo {
         width: 100%;
@@ -246,6 +256,130 @@
         z-index: 5;
     }
 
+    /* Top bar trong popup */
+    .ar-topbar {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%);
+        z-index: 25;
+        pointer-events: none;
+    }
+    .ar-topbar__info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #fff;
+        pointer-events: auto;
+    }
+    .ar-topbar__badge {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.16);
+        border: 1px solid rgba(255,255,255,0.28);
+        backdrop-filter: blur(8px);
+    }
+    .ar-topbar__title {
+        font-size: 16px;
+        font-weight: 600;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    }
+
+    /* Close button */
+    .ar-close-btn {
+        pointer-events: auto;
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.14);
+        border: 1px solid rgba(255,255,255,0.28);
+        color: #fff;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s ease;
+        backdrop-filter: blur(10px);
+    }
+    .ar-close-btn:hover {
+        background: #dc3545;
+        border-color: #dc3545;
+        transform: scale(1.08);
+    }
+
+    /* Bottom HUD bar */
+    .ar-bottom-bar {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 25;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: min(92vw, 620px);
+        pointer-events: none;
+    }
+    .ar-controls-panel {
+        pointer-events: auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: rgba(15, 15, 20, 0.72);
+        border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(12px);
+        color: #fff;
+    }
+    .ar-finger-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .ar-finger-btn {
+        border: 1px solid rgba(255,255,255,0.25);
+        background: transparent;
+        color: rgba(255,255,255,0.85);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 11px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .ar-finger-btn:hover {
+        border-color: #fff;
+        color: #fff;
+    }
+    .ar-finger-btn.active {
+        background: #fff;
+        color: #000;
+        border-color: #fff;
+    }
+    .ar-size-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .ar-size-control input[type="range"] {
+        width: 110px;
+        accent-color: #fff;
+        cursor: pointer;
+    }
+
     /* Loading spinner */
     .ar-loading {
         position: absolute;
@@ -253,8 +387,8 @@
         display: none;
         align-items: center;
         justify-content: center;
-        background: rgba(0,0,0,0.6);
-        z-index: 20;
+        background: rgba(0,0,0,0.65);
+        z-index: 30;
         flex-direction: column;
         gap: 12px;
     }
@@ -274,31 +408,33 @@
         to { transform: rotate(360deg); }
     }
 
-    /* Status indicator */
+    /* Status pill */
     .ar-status {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        padding: 8px 16px;
-        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 16px;
+        border-radius: 999px;
         font-size: 13px;
         font-weight: 500;
-        z-index: 15;
+        backdrop-filter: blur(8px);
         transition: all 0.3s ease;
     }
     .ar-status--loading {
-        background: rgba(255,193,7,0.85);
+        background: rgba(255,193,7,0.9);
         color: #000;
     }
     .ar-status--ready {
-        background: rgba(0,0,0,0.55);
+        background: rgba(0,0,0,0.65);
         color: #fff;
+        border: 1px solid rgba(255,255,255,0.2);
     }
     .ar-status--success {
-        background: rgba(40,167,69,0.85);
+        background: rgba(40,167,69,0.9);
         color: #fff;
     }
     .ar-status--error {
-        background: rgba(220,53,69,0.85);
+        background: rgba(220,53,69,0.9);
         color: #fff;
     }
 
@@ -311,7 +447,7 @@
         border-radius: 10px;
         font-size: 14px;
         font-weight: 500;
-        z-index: 9999;
+        z-index: 1000005;
         transform: translateX(120%);
         transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-shadow: 0 8px 24px rgba(0,0,0,0.25);
@@ -326,29 +462,6 @@
     .ar-toast--info {
         background: #17a2b8;
         color: #fff;
-    }
-
-    /* Close button */
-    .ar-close-btn {
-        position: absolute;
-        top: 10px; right: 10px;
-        z-index: 10;
-        width: 36px; height: 36px;
-        border-radius: 50%;
-        background: rgba(220,53,69,0.9);
-        border: none;
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s;
-        backdrop-filter: blur(4px);
-    }
-    .ar-close-btn:hover {
-        background: #dc3545;
-        transform: scale(1.1);
     }
 
 </style>
@@ -432,24 +545,45 @@
                     <i class="fas fa-camera me-2"></i> THỬ NHẪN QUA CAMERA
                 </button>
 
-                @* === AR 3D TRY-ON CONTAINER === *@
+                @* === AR 3D TRY-ON FULLSCREEN POPUP === *@
                 <div id="arCameraContainer" style="display: none;">
-                    <video id="arVideo" autoplay playsinline></video>
-                    <div id="arOverlayContainer"></div>
+                    <div id="arMediaWrapper">
+                        <video id="arVideo" autoplay playsinline></video>
+                        <div id="arOverlayContainer"></div>
+                    </div>
+
+                    @* Top Bar *@
+                    <div class="ar-topbar">
+                        <div class="ar-topbar__info">
+                            <span class="ar-topbar__badge">AR 3D Try-On</span>
+                            <span class="ar-topbar__title">@Model.Product.NamePro</span>
+                        </div>
+                        <button type="button" id="btnStopAR" class="ar-close-btn" title="??ng (Esc)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
 
                     @* Loading overlay *@
                     <div id="arLoading" class="ar-loading">
                         <div class="ar-loading__spinner"></div>
-                        <div class="ar-loading__text">Đang tải model 3D...</div>
+                        <div class="ar-loading__text">?ang t?i model 3D...</div>
                     </div>
 
-                    @* Status bar *@
-                    <div id="arStatus" class="ar-status" style="display:none;"></div>
-
-                    @* Close button *@
-                    <button type="button" id="btnStopAR" class="ar-close-btn" title="Tắt camera">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    @* Bottom HUD *@
+                    <div class="ar-bottom-bar">
+                        <div id="arStatus" class="ar-status" style="display:none;"></div>
+                        <div class="ar-controls-panel">
+                            <div class="ar-finger-group">
+                                <button type="button" class="ar-finger-btn active" data-finger="index">Ng?n tr?</button>
+                                <button type="button" class="ar-finger-btn" data-finger="middle">Ng?n gi?a</button>
+                                <button type="button" class="ar-finger-btn" data-finger="ring">Ng?n ?p ?t</button>
+                            </div>
+                            <div class="ar-size-control">
+                                <span>C? nh?n:</span>
+                                <input type="range" id="arSizeSlider" min="0.32" max="0.58" step="0.01" value="0.43" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 @* Toast notification (fixed position) *@
@@ -644,7 +778,7 @@
 
         // Load ringTryOn.js sau khi THREE sẵn sàng
         const s = document.createElement('script');
-        s.src = '/js/ringTryOn.js?v=2';
+        s.src = '/js/ringTryOn.js?v=3';
         s.onload = function() {
             RingTryOn.init();
 
@@ -654,6 +788,27 @@
             document.getElementById('btnStopAR').addEventListener('click', function() {
                 RingTryOn.stop();
             });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    RingTryOn.stop();
+                }
+            });
+
+            document.querySelectorAll('.ar-finger-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.ar-finger-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    RingTryOn.setFinger(this.getAttribute('data-finger'));
+                });
+            });
+
+            var sizeSlider = document.getElementById('arSizeSlider');
+            if (sizeSlider) {
+                sizeSlider.addEventListener('input', function() {
+                    RingTryOn.setScaleMultiplier(this.value);
+                });
+            }
         };
         s.onerror = function() {
             console.error('[RingTryOn] Không thể load ringTryOn.js');

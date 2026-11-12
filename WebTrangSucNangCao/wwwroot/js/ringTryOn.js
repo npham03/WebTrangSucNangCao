@@ -1,31 +1,28 @@
 /**
  * RingTryOn — 3D Ring Try-On Engine
- * Sử dụng Three.js + MediaPipe Hands để render model nhẫn 3D
- * định vị chính xác trên ngón trỏ, xoay theo tọa độ 3D xyz.
+ * Sử dụng Three.js (Perspective + RoomEnvironment) + MediaPipe Hands
+ * để render model nhẫn 3D ôm sát ngón tay trong chế độ popup toàn màn hình.
  */
 (function () {
     'use strict';
 
     // ============================================================
-    // CONSTANTS
+    // CONSTANTS & FINGER CONFIG
     // ============================================================
     const MODEL_PATH = '/models3D/nhan3D1.glb';
-    const LOAD_TIMEOUT_MS = 60000; // 60s cho file lớn
-    const SMOOTHING_FACTOR = 0.35; // 0 = no smooth, 1 = freeze (position/scale)
-    const ROTATION_SMOOTHING = 0.3; // slerp factor cho quaternion
-    const HAND_GONE_FRAMES = 8;    // số frame không thấy tay thì ẩn model
-    const RING_SCALE_MULTIPLIER = 0.58; // tuỳ chỉnh kích thước nhẫn (dựa trên độ dài đốt ngón tay mcp->pip)
+    const LOAD_TIMEOUT_MS = 60000;
+    const SMOOTHING_FACTOR = 0.35;
+    const ROTATION_SMOOTHING = 0.3;
+    const HAND_GONE_FRAMES = 8;
+    const DEFAULT_SCALE_MULTIPLIER = 0.43; // Vừa vặn chu vi ngón tay theo chiều dài đốt ngón
+    const CAMERA_FOV = 45;
+    const CAMERA_Z = 1 / Math.tan(Math.PI / 8); // ~2.4142 => tại z=0, halfHeight = 1, halfWidth = aspect
 
-    // MediaPipe Hand Landmark indices
-    const LM = {
-        WRIST: 0,
-        INDEX_MCP: 5,
-        INDEX_PIP: 6,
-        INDEX_DIP: 7,
-        MIDDLE_MCP: 9,
-        RING_MCP: 13,
-        PINKY_MCP: 17,
-        THUMB_CMC: 1
+    // Bộ landmark theo từng ngón tay (cùng quy ước MCP -> PIP -> refMCP về phía ngón út)
+    const FINGERS = {
+        index: { mcp: 5, pip: 6, refMcp: 9 },
+        middle: { mcp: 9, pip: 10, refMcp: 13 },
+        ring: { mcp: 13, pip: 14, refMcp: 17 }
     };
 
     // ============================================================
@@ -34,40 +31,42 @@
     let renderer, scene, camera3D;
     let pmremGenerator = null, envTexture = null;
     let ringModel = null;
-    let fingerOccluder = null; // Khối vô hình che khuất phần nhẫn bị ngón tay che
+    let fingerOccluder = null;
     let modelLoaded = false;
     let modelLoadError = null;
     let handMissingCount = 0;
 
-    // Smoothed values (initialized in init() after THREE is available)
+    let activeFinger = 'index';
+    let scaleMultiplier = DEFAULT_SCALE_MULTIPLIER;
+
     let smoothPos = null;
     let smoothQuat = null;
     let smoothScale = 1;
     let firstFrame = true;
 
-    // DOM refs (set in init)
-    let containerEl, videoEl, statusEl, toastEl, loadingEl, threejsCanvas;
+    // DOM refs
+    let containerEl, mediaWrapperEl, videoEl, statusEl, toastEl, loadingEl, threejsCanvas;
 
-    // Camera stream ref
+    // Camera / MediaPipe refs
     let mediapipeHands = null;
     let cameraUtil = null;
     let isRunning = false;
+    let resizeHandler = null;
 
     // ============================================================
     // INIT
     // ============================================================
-    function init(config) {
+    function init() {
         containerEl = document.getElementById('arCameraContainer');
+        mediaWrapperEl = document.getElementById('arMediaWrapper');
         videoEl = document.getElementById('arVideo');
         statusEl = document.getElementById('arStatus');
         toastEl = document.getElementById('arToast');
         loadingEl = document.getElementById('arLoading');
 
-        // Initialize THREE objects
         smoothPos = new THREE.Vector3();
         smoothQuat = new THREE.Quaternion();
 
-        // Check WebGL support
         if (!checkWebGL()) {
             showToast('Trình duyệt của bạn không hỗ trợ WebGL. Không thể thử nhẫn 3D.', 'error', 10000);
             return false;
@@ -77,12 +76,14 @@
         loadModel();
         setupMediaPipe();
 
+        resizeHandler = function () {
+            if (isRunning) syncRendererSize();
+        };
+        window.addEventListener('resize', resizeHandler);
+
         return true;
     }
 
-    // ============================================================
-    // WEBGL CHECK
-    // ============================================================
     function checkWebGL() {
         try {
             const c = document.createElement('canvas');
@@ -96,17 +97,16 @@
     // THREE.JS SETUP
     // ============================================================
     function setupThreeJS() {
-        // Renderer — transparent background overlay trên video
         renderer = new THREE.WebGLRenderer({
             alpha: true,
             antialias: true,
             premultipliedAlpha: false
         });
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setClearColor(0x000000, 0);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.8;
+        renderer.toneMappingExposure = 0.95; // Giữ độ tương phản kim loại, không bị cháy trắng
 
         threejsCanvas = renderer.domElement;
         threejsCanvas.id = 'threejsOverlay';
@@ -118,60 +118,48 @@
             overlayContainer.appendChild(threejsCanvas);
         }
 
-        // Scene
         scene = new THREE.Scene();
 
-        // Studio environment map giúp vật liệu kim loại phản chiếu sáng tự nhiên
         if (typeof THREE.RoomEnvironment === 'function' && typeof THREE.PMREMGenerator === 'function') {
             pmremGenerator = new THREE.PMREMGenerator(renderer);
             envTexture = pmremGenerator.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
             scene.environment = envTexture;
         }
 
-        // Camera — orthographic giúp dễ map tọa độ 2D->3D
-        camera3D = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1000);
-        camera3D.position.set(0, 0, 5);
+        // PerspectiveCamera: có chiều sâu 3D tự nhiên nhưng khớp hệ tọa độ 2D tại z = 0
+        camera3D = new THREE.PerspectiveCamera(CAMERA_FOV, 16 / 9, 0.05, 100);
+        camera3D.position.set(0, 0, CAMERA_Z);
         camera3D.lookAt(0, 0, 0);
 
-        // === LIGHTING — sáng hơn, tự nhiên hơn ===
-        // Hemisphere light: mô phỏng trời (trên) + mặt đất (dưới)
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 1.5);
+        // Ánh sáng cân bằng tạo khối kim loại & độ lấp lánh
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.45);
         scene.add(hemiLight);
 
-        // Ambient light phụ
-        const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.25);
         scene.add(ambient);
 
-        // Key light (ánh sáng chính - từ phía trước/trên)
-        const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
-        keyLight.position.set(2, 4, 6);
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+        keyLight.position.set(2, 4, 5);
         scene.add(keyLight);
 
-        // Fill light (ánh sáng phụ - từ phía ngược lại)
-        const fillLight = new THREE.DirectionalLight(0xfff8ee, 1.0);
+        const fillLight = new THREE.DirectionalLight(0xfff5e8, 0.45);
         fillLight.position.set(-3, 1, 4);
         scene.add(fillLight);
 
-        // Back light (ánh sáng viền - từ phía sau)
-        const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        backLight.position.set(0, 2, -4);
-        scene.add(backLight);
+        const rimLight = new THREE.DirectionalLight(0xdbeafe, 0.7);
+        rimLight.position.set(0, 2, -4);
+        scene.add(rimLight);
 
-        // Bottom fill (tránh bóng tối dưới nhẫn)
-        const bottomFill = new THREE.DirectionalLight(0xffffff, 0.5);
-        bottomFill.position.set(0, -3, 2);
-        scene.add(bottomFill);
-
-        // ===== FINGER OCCLUDER (khối vô hình che khuất) =====
-        // Hình trụ mô phỏng ngón tay: bán kính 0.5 (sẽ scale động), cao 1, trục dọc theo Y
-        const occluderGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 1, false);
+        // ===== FINGER OCCLUDER =====
+        // Khối trụ vô hình khớp đúng đường kính lòng trong của nhẫn để che sạch nửa sau
+        const occluderGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 32, 1, false);
         const occluderMat = new THREE.MeshBasicMaterial({
-            colorWrite: false,   // không vẽ màu — vô hình với mắt
-            depthWrite: true,    // vẫn ghi vào depth buffer
+            colorWrite: false,
+            depthWrite: true,
             depthTest: true
         });
         fingerOccluder = new THREE.Mesh(occluderGeo, occluderMat);
-        fingerOccluder.renderOrder = 0; // render TRƯỚC nhẫn
+        fingerOccluder.renderOrder = 0;
         fingerOccluder.visible = false;
         scene.add(fingerOccluder);
     }
@@ -186,7 +174,6 @@
 
         const loader = new THREE.GLTFLoader();
 
-        // Timeout
         const timeoutId = setTimeout(() => {
             if (!modelLoaded) {
                 modelLoadError = 'timeout';
@@ -198,63 +185,50 @@
 
         loader.load(
             MODEL_PATH,
-            // onLoad
             (gltf) => {
                 clearTimeout(timeoutId);
 
                 ringModel = gltf.scene;
 
-                // Normalize scale dựa trên bounding box
                 const box = new THREE.Box3().setFromObject(ringModel);
                 const size = new THREE.Vector3();
                 box.getSize(size);
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
-                    const normalizeScale = 1.0 / maxDim;
-                    ringModel.scale.setScalar(normalizeScale);
+                    ringModel.scale.setScalar(1.0 / maxDim);
                 }
 
-                // Center model
                 const box2 = new THREE.Box3().setFromObject(ringModel);
                 const center = new THREE.Vector3();
                 box2.getCenter(center);
                 ringModel.position.sub(center);
 
-                // Xoay ngang: model gốc dựng dọc (lỗ nhẫn hướng lên)
-                // → xoay -90° trục X để lỗ nhẫn hướng theo ngón tay
+                // Xoay -90° trục X để lỗ nhẫn hướng dọc theo trục Y của ngón tay
                 ringModel.rotation.x = -Math.PI / 2;
 
-                // Wrap trong group để dễ transform
                 const group = new THREE.Group();
                 group.add(ringModel);
                 ringModel = group;
 
                 ringModel.visible = false;
-                ringModel.renderOrder = 1; // render SAU occluder
+                ringModel.renderOrder = 1;
                 scene.add(ringModel);
 
-                // Enhance materials — fix mặt trong bị thấy + tăng sáng
+                // Giữ nguyên PBR texture gốc, cân chỉnh envMapIntensity vừa phải để không bị cháy trắng
                 ringModel.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-
-                        // Material có thể là array (multi-material) hoặc single
                         const mats = Array.isArray(child.material)
                             ? child.material
                             : [child.material];
 
                         mats.forEach((mat) => {
                             if (!mat) return;
-                            // CHỈ render mặt ngoài → ẩn mặt trong hoàn toàn
                             mat.side = THREE.FrontSide;
                             mat.depthWrite = true;
                             mat.transparent = false;
-                            // Tăng độ sáng
-                            mat.envMapIntensity = 2.0;
-                            if (mat.metalness !== undefined) {
-                                mat.metalness = Math.min(mat.metalness, 0.85);
-                                mat.roughness = Math.max(mat.roughness, 0.15);
+                            mat.envMapIntensity = 1.15;
+                            if (mat.roughness !== undefined) {
+                                mat.roughness = Math.max(mat.roughness, 0.08);
                             }
                             mat.needsUpdate = true;
                         });
@@ -263,17 +237,14 @@
 
                 modelLoaded = true;
                 showLoading(false);
-                setStatus('Đưa tay vào camera để thử nhẫn', 'ready');
-                console.log('[RingTryOn] Model loaded successfully.');
+                setStatus('Đưa ngón tay vào camera để thử nhẫn', 'ready');
             },
-            // onProgress
             (xhr) => {
                 if (xhr.total > 0) {
                     const pct = Math.round((xhr.loaded / xhr.total) * 100);
                     setStatus(`Đang tải model... ${pct}%`, 'loading');
                 }
             },
-            // onError
             (error) => {
                 clearTimeout(timeoutId);
                 modelLoadError = error;
@@ -317,18 +288,17 @@
         mediapipeHands.setOptions({
             maxNumHands: 1,
             modelComplexity: 1,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.65
         });
 
         mediapipeHands.onResults(onHandResults);
     }
 
     // ============================================================
-    // HAND TRACKING RESULTS — CORE LOGIC
+    // HAND TRACKING RESULTS
     // ============================================================
     function onHandResults(results) {
-        // Sync renderer size
         syncRendererSize();
 
         if (!modelLoaded || !ringModel) {
@@ -340,37 +310,33 @@
             const lm = results.multiHandLandmarks[0];
             handMissingCount = 0;
 
-            const aspect = (videoEl.videoWidth || 640) / (videoEl.videoHeight || 480);
+            const aspect = (videoEl.videoWidth || 1280) / (videoEl.videoHeight || 720);
+            const fCfg = FINGERS[activeFinger] || FINGERS.index;
+            const mcp = lm[fCfg.mcp];
+            const pip = lm[fCfg.pip];
+            const refMcp = lm[fCfg.refMcp];
 
-            // ---- POSITION: Giữa MCP và PIP ngón trỏ ----
-            const mcp = lm[LM.INDEX_MCP];
-            const pip = lm[LM.INDEX_PIP];
-
-            // Vị trí đeo nhẫn: lệch về phía PIP 55% (vừa vặn phần lóng tay đeo nhẫn)
-            const t = 0.55;
+            // Vị trí đeo nhẫn: khoảng 46% từ gốc ngón (MCP) lên khớp giữa (PIP)
+            const t = 0.46;
             const ringPosNorm = {
                 x: mcp.x + (pip.x - mcp.x) * t,
-                y: mcp.y + (pip.y - mcp.y) * t,
-                z: mcp.z + (pip.z - mcp.z) * t
+                y: mcp.y + (pip.y - mcp.y) * t
             };
 
-            // Convert normalized coords (0-1) → Three.js orthographic coords (có nhân aspect cho X)
             const targetPos = new THREE.Vector3(
                 (ringPosNorm.x - 0.5) * 2 * aspect,
                 -(ringPosNorm.y - 0.5) * 2,
                 0
             );
 
-            // ---- ROTATION: Tính quaternion từ 3 trục ----
-            const targetQuat = computeRingRotation(lm, aspect);
+            const targetQuat = computeRingRotation(mcp, pip, refMcp, aspect);
 
-            // ---- SCALE: Tính theo chiều dài đốt ngón tay (ổn định hơn bề ngang khi xoay tay) ----
+            // Chiều dài đốt ngón trong không gian 3D chuẩn hóa -> scale nhẫn theo slider
             const mcp3 = vec3FromLM(mcp, aspect);
             const pip3 = vec3FromLM(pip, aspect);
             const phalanxLength = pip3.distanceTo(mcp3);
-            const targetScale = phalanxLength * RING_SCALE_MULTIPLIER;
+            const targetScale = phalanxLength * scaleMultiplier;
 
-            // ---- SMOOTHING ----
             if (firstFrame) {
                 smoothPos.copy(targetPos);
                 smoothQuat.copy(targetQuat);
@@ -382,123 +348,106 @@
                 smoothScale += (targetScale - smoothScale) * SMOOTHING_FACTOR;
             }
 
-            // ---- APPLY ----
             ringModel.position.copy(smoothPos);
             ringModel.quaternion.copy(smoothQuat);
             ringModel.scale.setScalar(smoothScale);
             ringModel.visible = true;
 
-            // ---- UPDATE FINGER OCCLUDER ----
-            // Đẩy occluder lùi nhẹ về phía sau (-Z, ra xa camera) so với tâm nhẫn
-            // để chỉ che đúng phần mặt sau của nhẫn mà không che mặt trước nhẫn
-            const OCCLUDER_Z_OFFSET = -0.008;
-            fingerOccluder.position.set(
-                smoothPos.x,
-                smoothPos.y,
-                smoothPos.z + OCCLUDER_Z_OFFSET
-            );
+            // ---- FINGER OCCLUDER ----
+            // Lòng trong của nhan3D1.glb có bán kính ~0.384 * scale (đường kính ~0.768).
+            // Đặt trụ occluder đúng tâm nhẫn với đường kính 0.74 * smoothScale (r = 0.37)
+            // giúp mặt trước của nhẫn luôn nổi lên trọn vẹn, còn nửa sau bị ngón tay che hoàn toàn.
+            fingerOccluder.position.copy(smoothPos);
             fingerOccluder.quaternion.copy(smoothQuat);
-            // Bán kính occluder vừa khít lỗ lòng trong nhẫn (~37% kích thước tổng của nhẫn)
-            const occluderRadius = smoothScale * 0.37;
-            const segLength = phalanxLength * 1.5;
-            fingerOccluder.scale.set(occluderRadius, segLength, occluderRadius);
+            const occluderDiameter = smoothScale * 0.74;
+            const segLength = phalanxLength * 1.6;
+            fingerOccluder.scale.set(occluderDiameter, segLength, occluderDiameter);
             fingerOccluder.visible = true;
 
             setStatus('✓ Đã nhận diện bàn tay — Nhẫn đang hiển thị', 'success');
-
         } else {
-            // Không tìm thấy bàn tay
             handMissingCount++;
             if (handMissingCount > HAND_GONE_FRAMES) {
                 ringModel.visible = false;
                 if (fingerOccluder) fingerOccluder.visible = false;
                 firstFrame = true;
-                setStatus('Đưa tay vào camera để thử nhẫn', 'ready');
+                setStatus('Đưa ngón tay vào camera để thử nhẫn', 'ready');
             }
         }
 
         renderer.render(scene, camera3D);
     }
 
-    // ============================================================
-    // COMPUTE RING ROTATION — Tính quaternion 3D từ hand landmarks
-    // ============================================================
-    function computeRingRotation(lm, aspect) {
-        const mcp3 = vec3FromLM(lm[LM.INDEX_MCP], aspect);
-        const pip3 = vec3FromLM(lm[LM.INDEX_PIP], aspect);
-        const middleMCP3 = vec3FromLM(lm[LM.MIDDLE_MCP], aspect);
+    function computeRingRotation(mcp, pip, refMcp, aspect) {
+        const mcp3 = vec3FromLM(mcp, aspect);
+        const pip3 = vec3FromLM(pip, aspect);
+        const refMCP3 = vec3FromLM(refMcp, aspect);
 
-        // ---- Trục Y (up) = hướng ngón tay: MCP → PIP ----
         const axisY = new THREE.Vector3().subVectors(pip3, mcp3);
-        if (axisY.lengthSq() < 1e-6) {
-            axisY.set(0, 1, 0);
-        } else {
-            axisY.normalize();
-        }
+        if (axisY.lengthSq() < 1e-6) axisY.set(0, 1, 0);
+        else axisY.normalize();
 
-        // ---- Trục tham chiếu = hướng ngang bàn tay: INDEX_MCP → MIDDLE_MCP ----
-        const handRight = new THREE.Vector3().subVectors(middleMCP3, mcp3);
-        if (handRight.lengthSq() < 1e-6) {
-            handRight.set(1, 0, 0);
-        } else {
-            handRight.normalize();
-        }
+        const handRight = new THREE.Vector3().subVectors(refMCP3, mcp3);
+        if (handRight.lengthSq() < 1e-6) handRight.set(1, 0, 0);
+        else handRight.normalize();
 
-        // ---- Trục Z (forward/out of finger) = cross(Y, handRight) ----
         const axisZ = new THREE.Vector3().crossVectors(axisY, handRight);
-        if (axisZ.lengthSq() < 1e-6) {
-            axisZ.set(0, 0, 1);
-        } else {
-            axisZ.normalize();
-        }
+        if (axisZ.lengthSq() < 1e-6) axisZ.set(0, 0, 1);
+        else axisZ.normalize();
 
-        // ---- Trục X (right) = cross(Y, Z) — đảm bảo orthogonal ----
         const axisX = new THREE.Vector3().crossVectors(axisY, axisZ);
-        if (axisX.lengthSq() < 1e-6) {
-            axisX.set(1, 0, 0);
-        } else {
-            axisX.normalize();
-        }
+        if (axisX.lengthSq() < 1e-6) axisX.set(1, 0, 0);
+        else axisX.normalize();
 
-        // Xây rotation matrix 3x3 → Matrix4
-        const rotMatrix = new THREE.Matrix4();
-        rotMatrix.makeBasis(axisX, axisY, axisZ);
-
+        const rotMatrix = new THREE.Matrix4().makeBasis(axisX, axisY, axisZ);
         return new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
     }
 
-    // Helper: Convert MediaPipe landmark → Three.Vector3
-    // MediaPipe: x(0-1,left-right) y(0-1,top-bottom) z(negative=towards camera)
+    // MediaPipe landmark.z dùng cùng đơn vị tỉ lệ với x (chiều rộng ảnh) -> nhân aspect để giữ đúng tỉ lệ 3D
     function vec3FromLM(landmark, aspect = 1) {
         return new THREE.Vector3(
             (landmark.x - 0.5) * 2 * aspect,
             -(landmark.y - 0.5) * 2,
-            -landmark.z * 2           // z scale factor
+            -landmark.z * 2 * aspect
         );
     }
 
     // ============================================================
-    // RENDERER SIZE SYNC
+    // FULLSCREEN STAGE & RENDERER SIZE SYNC
     // ============================================================
     function syncRendererSize() {
-        const w = videoEl.videoWidth || 640;
-        const h = videoEl.videoHeight || 480;
+        const w = videoEl.videoWidth || 1280;
+        const h = videoEl.videoHeight || 720;
+        const videoAspect = w / h;
+
+        // Căn kích thước #arMediaWrapper phủ kín toàn màn hình theo kiểu "cover"
+        // để video và canvas 3D luôn khớp 1:1 từng pixel trên mọi màn hình
+        if (mediaWrapperEl) {
+            const viewW = window.innerWidth;
+            const viewH = window.innerHeight;
+            const viewAspect = viewW / viewH;
+
+            let stageW, stageH;
+            if (viewAspect > videoAspect) {
+                stageW = viewW;
+                stageH = viewW / videoAspect;
+            } else {
+                stageH = viewH;
+                stageW = viewH * videoAspect;
+            }
+            mediaWrapperEl.style.width = Math.ceil(stageW) + 'px';
+            mediaWrapperEl.style.height = Math.ceil(stageH) + 'px';
+        }
 
         if (renderer.domElement.width !== w || renderer.domElement.height !== h) {
             renderer.setSize(w, h, false);
-
-            // Update orthographic camera aspect
-            const aspect = w / h;
-            camera3D.left = -aspect;
-            camera3D.right = aspect;
-            camera3D.top = 1;
-            camera3D.bottom = -1;
+            camera3D.aspect = videoAspect;
             camera3D.updateProjectionMatrix();
         }
     }
 
     // ============================================================
-    // START / STOP
+    // START / STOP / CONTROLS
     // ============================================================
     function start() {
         if (isRunning) return;
@@ -513,8 +462,9 @@
         firstFrame = true;
         handMissingCount = 999;
 
-        containerEl.style.display = 'block';
-        document.getElementById('btnStartAR').style.display = 'none';
+        containerEl.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        syncRendererSize();
 
         if (!modelLoaded && !modelLoadError) {
             setStatus('Đang tải model 3D...', 'loading');
@@ -527,8 +477,8 @@
                         await mediapipeHands.send({ image: videoEl });
                     }
                 },
-                width: 640,
-                height: 480
+                width: 1280,
+                height: 720
             });
         }
 
@@ -547,10 +497,11 @@
             cameraUtil.stop();
         }
 
-        containerEl.style.display = 'none';
-        document.getElementById('btnStartAR').style.display = 'block';
+        if (containerEl) {
+            containerEl.style.display = 'none';
+        }
+        document.body.style.overflow = '';
 
-        // Clean canvas
         if (renderer) {
             renderer.clear();
         }
@@ -566,8 +517,27 @@
         setStatus('', 'idle');
     }
 
+    function setFinger(fingerKey) {
+        if (FINGERS[fingerKey]) {
+            activeFinger = fingerKey;
+            firstFrame = true;
+        }
+    }
+
+    function setScaleMultiplier(val) {
+        const num = parseFloat(val);
+        if (!isNaN(num) && num >= 0.25 && num <= 0.75) {
+            scaleMultiplier = num;
+        }
+    }
+
     function dispose() {
         stop();
+
+        if (resizeHandler) {
+            window.removeEventListener('resize', resizeHandler);
+            resizeHandler = null;
+        }
 
         if (envTexture) {
             envTexture.dispose();
@@ -618,7 +588,7 @@
         statusEl.textContent = text;
         statusEl.className = 'ar-status';
         if (type) statusEl.classList.add('ar-status--' + type);
-        statusEl.style.display = text ? 'block' : 'none';
+        statusEl.style.display = text ? 'inline-flex' : 'none';
     }
 
     let toastTimeout = null;
@@ -643,7 +613,9 @@
         init: init,
         start: start,
         stop: stop,
-        dispose: dispose
+        dispose: dispose,
+        setFinger: setFinger,
+        setScaleMultiplier: setScaleMultiplier
     };
 
 })();
