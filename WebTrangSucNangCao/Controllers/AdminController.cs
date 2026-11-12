@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using WebTrangSucNangCao.Models;
+using WebTrangSucNangCao.Services;
 using System.Diagnostics;
 
 namespace WebTrangSucNangCao.Controllers
@@ -20,13 +21,16 @@ namespace WebTrangSucNangCao.Controllers
         // 1. Khai báo các dịch vụ (Dependency Injection)
         private readonly ShopOnlineContext _database;
         private readonly IWebHostEnvironment _env;
+        private readonly IEmailSender _emailSender;
 
         public AdminController(
             ShopOnlineContext database,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IEmailSender emailSender)
         {
             _database = database;
             _env = env;
+            _emailSender = emailSender;
         }
 
         // HÀM 1: (GET) Mở trang Dashboard (Index)
@@ -346,6 +350,64 @@ namespace WebTrangSucNangCao.Controllers
 
             dbOrder.Status = status;
             await _database.SaveChangesAsync();
+
+            // Gửi email thông báo cập nhật trạng thái đơn hàng tới khách hàng (kể cả khách vãng lai)
+            try
+            {
+                var customer = await _database.Customers.FirstOrDefaultAsync(c => c.Idcus == dbOrder.Idcus);
+                if (customer != null && !string.IsNullOrEmpty(customer.EmailCus))
+                {
+                    string subject = $"[Rosaria] Cập nhật trạng thái đơn hàng #{dbOrder.Id}";
+                    
+                    string logoHtml = "";
+                    try
+                    {
+                        string logoPath = System.IO.Path.Combine(_env.WebRootPath, "images", "rosa4.png");
+                        if (System.IO.File.Exists(logoPath))
+                        {
+                            byte[] logoBytes = System.IO.File.ReadAllBytes(logoPath);
+                            string logoBase64 = Convert.ToBase64String(logoBytes);
+                            logoHtml = $"<img src='data:image/png;base64,{logoBase64}' alt='Rosaria Logo' style='max-height: 45px; width: auto; margin-bottom: 8px; filter: brightness(0) invert(1); display: inline-block;' /><br/>";
+                        }
+                    }
+                    catch { }
+
+                    string emailBody = $@"
+                        <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff; border: 1px solid #111111;'>
+                            <!-- BANNER ĐẦU TRANG - TÔNG ĐEN SANG TRỌNG CÓ LOGO NAVBAR -->
+                            <div style='background-color: #000000; padding: 25px 20px; text-align: center;'>
+                                {logoHtml}
+                                <h1 style='color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;'>ROSARIA</h1>
+                                <p style='color: #888888; margin: 4px 0 0 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;'>Jewelry & Accessories</p>
+                            </div>
+                            
+                            <!-- NỘI DUNG CHÍNH -->
+                            <div style='padding: 30px 25px;'>
+                                <h2 style='color: #111111; margin-top: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px;'>CẬP NHẬT ĐƠN HÀNG #{dbOrder.Id}</h2>
+                                <p style='color: #444444; font-size: 14px; line-height: 1.6;'>Kính chào <strong>{customer.NameCus}</strong>,</p>
+                                <p style='color: #444444; font-size: 14px; line-height: 1.6;'>Trạng thái đơn hàng <strong>#{dbOrder.Id}</strong> của bạn đã được cập nhật mới nhất:</p>
+                                
+                                <div style='margin: 25px 0; padding: 18px; background-color: #000000; color: #ffffff; text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;'>
+                                    TRẠNG THÁI: {status.ToUpper()}
+                                </div>
+                                
+                                <p style='color: #666666; font-size: 13px; line-height: 1.5;'>Cảm ơn bạn đã luôn tin tưởng và lựa chọn sản phẩm từ Rosaria.</p>
+                            </div>
+                            
+                            <!-- FOOTER -->
+                            <div style='background-color: #f4f4f4; padding: 20px; text-align: center; border-top: 1px solid #e5e5e5; font-size: 12px; color: #777777;'>
+                                <p style='margin: 0 0 4px 0; font-weight: 600; color: #111111; letter-spacing: 1px;'>ROSARIA JEWELRY</p>
+                                <p style='margin: 0;'>Email này được gửi tự động từ hệ thống.</p>
+                            </div>
+                        </div>";
+
+                    _ = Task.Run(() => _emailSender.SendEmailAsync(customer.EmailCus, subject, emailBody));
+                }
+            }
+            catch
+            {
+                // Bỏ qua lỗi gửi mail để tránh ảnh hưởng phản hồi AJAX
+            }
 
             return Json(new { success = true, newStatus = status });
         }

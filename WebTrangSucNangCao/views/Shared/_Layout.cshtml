@@ -19,6 +19,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
+    <!-- Page Transition Overlay -->
+    <div id="pageTransitionOverlay" class="page-transition-overlay">
+        <div class="spinner-border text-dark" style="width: 3rem; height: 3rem; border-width: 0.25em;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    <style>
+        .page-transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        .page-transition-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
 
     <nav class="navbar" id="mainNavbar">
 
@@ -94,19 +121,21 @@
                 // Lấy thông tin ngôn ngữ hiện tại từ Request
                 var requestCulture = Context.Features.Get<IRequestCultureFeature>();
                 var currentCulture = requestCulture?.RequestCulture.Culture.Name ?? "en";
-                // Xác định ngôn ngữ mục tiêu khi click vào nút
-                var targetCulture = currentCulture == "en" ? "vi" : "en";
-                var buttonText = currentCulture == "en" ? "Vi" : "En";
             }
 
-            <div class="lang-switch" style="cursor: pointer;">
-                <form asp-controller="Language" asp-action="Change" method="post" id="langForm" class="m-0 p-0">
-                    <input type="hidden" name="culture" value="@targetCulture" />
+            <div class="lang-switch" style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 16px;">
+                <form asp-controller="Language" asp-action="Change" method="post" id="langForm" style="display: none;">
+                    <input type="hidden" name="culture" id="langCulture" value="" />
                     <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                    <a href="javascript:document.getElementById('langForm').submit();" style="text-decoration: none; color: inherit; font-weight: 600;">
-                        @buttonText
-                    </a>
                 </form>
+                
+                <a href="javascript:void(0);" onclick="changeLanguageWithTransition('vi')" style="text-decoration: none; transition: color 0.2s; font-weight: @(currentCulture == "vi" ? "bold" : "normal"); color: @(currentCulture == "vi" ? "inherit" : "#888");">
+                    Vie
+                </a>
+                <span style="color: #ccc; font-weight: normal; user-select: none;">|</span>
+                <a href="javascript:void(0);" onclick="changeLanguageWithTransition('en')" style="text-decoration: none; transition: color 0.2s; font-weight: @(currentCulture == "en" ? "bold" : "normal"); color: @(currentCulture == "en" ? "inherit" : "#888");">
+                    Eng
+                </a>
             </div>
         </div>
 
@@ -186,6 +215,29 @@
             window.addEventListener('resize', updateNavbarState);
             updateNavbarState();
         });
+
+        // Tắt overlay khi DOM đã tải xong
+        window.addEventListener('DOMContentLoaded', function () {
+            const overlay = document.getElementById('pageTransitionOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        });
+        
+        // Hàm chuyển ngôn ngữ có hiệu ứng mượt
+        function changeLanguageWithTransition(culture) {
+            const overlay = document.getElementById('pageTransitionOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('langCulture').value = culture;
+                    document.getElementById('langForm').submit();
+                }, 300); // Đợi 300ms cho màn hình mờ dần rồi mới submit trang
+            } else {
+                document.getElementById('langCulture').value = culture;
+                document.getElementById('langForm').submit();
+            }
+        }
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

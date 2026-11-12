@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebTrangSucNangCao.Models; // Sửa theo namespace của bạn
+using WebTrangSucNangCao.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Đăng ký dịch vụ Gửi Email Resend API
+builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
 
 // Cấu hình Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -16,6 +20,21 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 })
 .AddEntityFrameworkStores<ShopOnlineContext>()
 .AddDefaultTokenProviders();
+
+// THÊM VÀO: Cấu hình đăng nhập bằng Google & Facebook
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        // Nhập ClientId và ClientSecret của bạn sau khi tạo trên Google Cloud Console
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "YOUR_GOOGLE_CLIENT_ID";
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "YOUR_GOOGLE_CLIENT_SECRET";
+    })
+    .AddFacebook(options =>
+    {
+        // Nhập AppId và AppSecret của bạn sau khi tạo trên Facebook Developers
+        options.AppId = builder.Configuration["Authentication:Facebook:AppId"] ?? "YOUR_FACEBOOK_APP_ID";
+        options.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"] ?? "YOUR_FACEBOOK_APP_SECRET";
+    });
 
 // Cấu hình Session cho giỏ hàng
 builder.Services.AddDistributedMemoryCache();

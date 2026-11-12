@@ -43,8 +43,7 @@
                     {
                         <tr class="product-row" data-name="@item.NamePro?.ToLower()">
                             <td class="text-center">
-                                <img src="@Url.Content(Url.NormalizeImagePath(item.ImagePro ?? "~/images/placeholder.png"))"
-                                     style="width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;" />
+                                <img src="@Url.Content(Url.NormalizeImagePath(item.ImagePro))" style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
                             </td>
                             <td>
                                 <div class="fw-bold text-dark product-name-text">@item.NamePro</div>

@@ -8,20 +8,24 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
 using WebTrangSucNangCao.Models; // Đổi lại đúng namespace Models của project
-using Microsoft.AspNetCore.Authorization;
+using WebTrangSucNangCao.Services;
 
 namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp project
 {
     public class CartController : Controller
     {
-        // 1. Tiêm Dependency Injection cho DbContext và UserManager
+        // 1. Tiêm Dependency Injection cho DbContext, UserManager và IEmailSender
         private readonly ShopOnlineContext _database;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IEmailSender _emailSender;
+        private readonly IWebHostEnvironment _env;
 
-        public CartController(ShopOnlineContext database, UserManager<ApplicationUser> userManager)
+        public CartController(ShopOnlineContext database, UserManager<ApplicationUser> userManager, IEmailSender emailSender, IWebHostEnvironment env)
         {
             _database = database;
             _userManager = userManager;
+            _emailSender = emailSender;
+            _env = env;
         }
 
         // TRANG CHÍNH CỦA GIỎ HÀNG (GET) Mở trang giỏ hàng
@@ -64,13 +68,6 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [HttpPost]
         public ActionResult AddToCart(int VariantId)
         {
-            // === CHÈN THÊM ĐOẠN NÀY ĐỂ BẮT BUỘC ĐĂNG NHẬP ===
-            if (!User.Identity.IsAuthenticated)
-            {
-                return Json(new { success = false, redirectToLogin = true, message = "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng." });
-            }
-            // ==============================================
-            
             int finalQuantity = 0;
 
             if (User.Identity.IsAuthenticated)
@@ -139,7 +136,6 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         [HttpPost]
         public ActionResult BuyNow(int VariantId)
         {
-            
             if (User.Identity.IsAuthenticated)
             {
                 string UserId = _userManager.GetUserId(User);
@@ -157,12 +153,32 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             }
             else
             {
-                // THAY THẾ TOÀN BỘ PHẦN ELSE CŨ BẰNG 1 DÒNG NÀY:
-                return Json(new { success = false, redirectToLogin = true, message = "Vui lòng đăng nhập để thực hiện chức năng mua ngay." });
+                List<CartItemViewModel> sessionCart = GetCartFromSession();
+                var sessionItem = sessionCart.FirstOrDefault(c => c.VariantId == VariantId);
+
+                if (sessionItem != null) { sessionItem.Quantity++; }
+                else
+                {
+                    var variant = _database.ProductVariants.Find(VariantId);
+                    if (variant != null)
+                    {
+                        var product = _database.Products.Find(variant.ProductId.Value);
+                        sessionCart.Add(new CartItemViewModel
+                        {
+                            VariantId = variant.VariantId,
+                            VariantName = variant.VariantName,
+                            ProductId = product.ProductId,
+                            NamePro = product.NamePro,
+                            ImagePro = product.ImagePro,
+                            Price = product.Price ?? 0,
+                            Quantity = 1
+                        });
+                    }
+                }
+                SaveCartToSession(sessionCart);
             }
 
-            // THAY THẾ LỆNH RETURN REDIRECT CŨ BẰNG DÒNG NÀY:
-            return Json(new { success = true, redirectUrl = Url.Action("Checkout", "Cart") });
+            return RedirectToAction("Checkout", "Cart");
         }
 
         // XÓA SẢN PHẨM (POST)
@@ -274,7 +290,6 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
         }
 
         // CHECKOUT (GET) 
-        [Authorize]
         public async Task<ActionResult> Checkout()
         {
             var viewModel = new CheckoutViewModel();
@@ -311,6 +326,7 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                     string fullName = $"{user.LastName} {user.Name}".Trim();
                     viewModel.Name = string.IsNullOrEmpty(fullName) ? user.UserName : fullName;
                     viewModel.Phone = user.PhoneNumber;
+                    viewModel.Email = user.Email ?? user.UserName;
                     
                     // Nếu user có sẵn địa chỉ từ trước, ta gán tạm vào StreetAddress để khách chỉnh sửa
                     viewModel.StreetAddress = user.Address;
@@ -358,9 +374,12 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                 }
             }
 
-            // 1. TẠO HOẶC LẤY KHÁCH HÀNG
-            string emailCus = User.Identity.IsAuthenticated ? User.Identity.Name : "guest@email.com";
-            Customer orderCustomer = _database.Customers.FirstOrDefault(c => c.EmailCus == emailCus);
+            // 1. TẠO HOẶC LẤY KHÁCH HÀNG (DỰA TRÊN EMAIL CHUẨN ĐƯỢC NHẬP/XÁC THỰC)
+            string emailCus = (User.Identity.IsAuthenticated && !string.IsNullOrEmpty(User.Identity.Name)) 
+                ? User.Identity.Name 
+                : viewModel.Email?.Trim();
+
+            Customer orderCustomer = await _database.Customers.FirstOrDefaultAsync(c => c.EmailCus == emailCus);
             if (orderCustomer == null)
             {
                 orderCustomer = new Customer
@@ -370,13 +389,13 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
                     EmailCus = emailCus
                 };
                 _database.Customers.Add(orderCustomer);
-                _database.SaveChanges();
+                await _database.SaveChangesAsync();
             }
             else
             {
                 orderCustomer.NameCus = viewModel.Name;
                 orderCustomer.PhoneCus = viewModel.Phone;
-                _database.SaveChanges();
+                await _database.SaveChangesAsync();
             }
 
             // 2. TẠO ĐƠN HÀNG (OrderPro)
@@ -416,7 +435,86 @@ namespace WebTrangSucNangCao.Controllers // Đổi tên namespace cho khớp pro
             }
             _database.SaveChanges();
 
-            // 4. Xóa giỏ hàng & Xóa mã giảm giá đã áp dụng trong Session
+            // 4. GỬI EMAIL XÁC NHẬN ĐƠN HÀNG QUA RESEND API
+            try
+            {
+                if (!string.IsNullOrEmpty(orderCustomer.EmailCus))
+                {
+                    string recipientEmail = orderCustomer.EmailCus;
+                    string subject = $"[Rosaria] Xác nhận đơn hàng #{newOrder.Id}";
+                    string orderItemsHtml = string.Join("", cartItems.Select(i => $"<tr><td style='padding: 12px 0; border-bottom: 1px solid #e5e5e5; color: #111111;'>{i.NamePro} <span style='color: #777777;'>x{i.Quantity}</span></td><td style='padding: 12px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600; color: #111111;'>{i.Price * i.Quantity:N0} VNĐ</td></tr>"));
+                    
+                    string logoHtml = "";
+                    try
+                    {
+                        string logoPath = System.IO.Path.Combine(_env.WebRootPath, "images", "rosa4.png");
+                        if (System.IO.File.Exists(logoPath))
+                        {
+                            byte[] logoBytes = System.IO.File.ReadAllBytes(logoPath);
+                            string logoBase64 = Convert.ToBase64String(logoBytes);
+                            logoHtml = $"<img src='data:image/png;base64,{logoBase64}' alt='Rosaria Logo' style='max-height: 50px; width: auto; margin-bottom: 10px; filter: brightness(0) invert(1); display: inline-block;' /><br/>";
+                        }
+                    }
+                    catch { }
+
+                    string emailBody = $@"
+                        <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff; border: 1px solid #111111;'>
+                            <!-- BANNER ĐẦU TRANG - TÔNG ĐEN SANG TRỌNG CÓ LOGO NAVBAR -->
+                            <div style='background-color: #000000; padding: 30px 20px; text-align: center;'>
+                                {logoHtml}
+                                <h1 style='color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;'>ROSARIA</h1>
+                                <p style='color: #888888; margin: 5px 0 0 0; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;'>Jewelry & Accessories</p>
+                            </div>
+                            
+                            <!-- NỘI DUNG CHÍNH -->
+                            <div style='padding: 35px 30px;'>
+                                <h2 style='color: #111111; margin-top: 0; font-size: 20px; font-weight: 600; letter-spacing: 0.5px;'>XÁC NHẬN ĐƠN HÀNG #{newOrder.Id}</h2>
+                                <p style='color: #444444; font-size: 14px; line-height: 1.6;'>Kính chào <strong>{orderCustomer.NameCus}</strong>,</p>
+                                <p style='color: #444444; font-size: 14px; line-height: 1.6;'>Cảm ơn bạn đã lựa chọn Rosaria. Đơn hàng của bạn đã được hệ thống tiếp nhận thành công và đang được chuẩn bị.</p>
+                                
+                                <!-- BẢNG SẢN PHẨM MUA -->
+                                <h3 style='color: #111111; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 30px; border-bottom: 2px solid #000000; padding-bottom: 8px;'>Chi Tiết Đơn Hàng</h3>
+                                <table style='width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;'>
+                                    <thead>
+                                        <tr style='border-bottom: 1px solid #111111; color: #111111;'>
+                                            <th style='padding: 10px 0; text-align: left; font-weight: 600;'>Sản phẩm</th>
+                                            <th style='padding: 10px 0; text-align: right; font-weight: 600;'>Thành tiền</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {orderItemsHtml}
+                                    </tbody>
+                                </table>
+                                
+                                <!-- KHU VỰC ĐỊA CHỈ -->
+                                <div style='margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-left: 3px solid #000000; font-size: 13px; color: #333333;'>
+                                    <p style='margin: 0 0 8px 0;'><strong>Người nhận:</strong> {orderCustomer.NameCus}</p>
+                                    <p style='margin: 0 0 8px 0;'><strong>Số điện thoại:</strong> {orderCustomer.PhoneCus}</p>
+                                    <p style='margin: 0;'><strong>Địa chỉ giao hàng:</strong> {newOrder.AddressDeliverry}</p>
+                                </div>
+                                
+                                <!-- TRẠNG THÁI -->
+                                <div style='margin-top: 25px; text-align: center; padding: 15px; background-color: #000000; color: #ffffff; font-size: 13px; font-weight: 600; letter-spacing: 1.5px;'>
+                                    TRẠNG THÁI: {newOrder.Status.ToUpper()}
+                                </div>
+                            </div>
+                            
+                            <!-- FOOTER -->
+                            <div style='background-color: #f4f4f4; padding: 20px; text-align: center; border-top: 1px solid #e5e5e5; font-size: 12px; color: #777777;'>
+                                <p style='margin: 0 0 4px 0; font-weight: 600; color: #111111; letter-spacing: 1px;'>ROSARIA JEWELRY</p>
+                                <p style='margin: 0;'>Email này được gửi tự động từ hệ thống.</p>
+                            </div>
+                        </div>";
+
+                    _ = Task.Run(() => _emailSender.SendEmailAsync(recipientEmail, subject, emailBody));
+                }
+            }
+            catch
+            {
+                // Bỏ qua lỗi gửi mail để tránh làm gián đoạn trải nghiệm mua hàng của khách
+            }
+
+            // 5. Xóa giỏ hàng & Xóa mã giảm giá đã áp dụng trong Session
             ClearCart();
             HttpContext.Session.Remove("AppliedCoupon");
             HttpContext.Session.Remove("DiscountAmount");
