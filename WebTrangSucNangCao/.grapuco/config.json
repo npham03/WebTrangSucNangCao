@@ -1,0 +1,24 @@
+{
+  "repoId": "1259306e-3554-4102-a823-2b711948a72a",
+  "repoName": "WebTrangSucNangCao",
+  "server": "https://api.grapuco.com",
+  "language": "csharp",
+  "features": {
+    "embeddings": true,
+    "dataFlowAnalysis": true
+  },
+  "ignore": [
+    "node_modules",
+    "dist",
+    ".next",
+    ".git",
+    ".grapuco",
+    "__pycache__",
+    "vendor",
+    "target",
+    "build"
+  ],
+  "workspaceId": "08534215-22a1-4f78-aa2e-bc0967863fbd",
+  "workspaceName": "Rosaria",
+  "lastPush": "2026-10-21T09:45:20.499Z"
+}
